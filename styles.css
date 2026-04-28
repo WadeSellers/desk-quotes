@@ -473,6 +473,24 @@ body { transition: background 1800ms ease; }
   font-style: italic;
 }
 
+.settings__refresh {
+  display: inline-block;
+  margin-top: 2em;
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 10px 16px;
+  cursor: pointer;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transition: color 200ms ease, border-color 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings__refresh:hover { color: var(--ink); border-color: var(--ink); }
+.settings__refresh:active { transform: translateY(1px); }
+
 /* ------------------------------------------------------------
    High-DPI tweaks
    ------------------------------------------------------------ */

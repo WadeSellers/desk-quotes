@@ -404,6 +404,8 @@ const settingsPanel = (() => {
           The slideshow keeps cycling but shifts to a working mood; on the
           break the palette warms and the quotes turn reflective.
         </p>
+
+        <button class="settings__refresh" type="button">Reload app</button>
       </div>`;
 
     // Wire chips
@@ -439,6 +441,15 @@ const settingsPanel = (() => {
       });
     }
     root._sync = syncChips;
+
+    // Reload — flush all SW caches then reload, so a freshly-deployed
+    // version is fetched immediately rather than on the second reload.
+    root.querySelector('.settings__refresh').addEventListener('click', async () => {
+      try {
+        for (const k of await caches.keys()) await caches.delete(k);
+      } catch {}
+      window.location.reload();
+    });
 
     // Close interactions
     root.querySelector('.settings__close').addEventListener('click', close);
