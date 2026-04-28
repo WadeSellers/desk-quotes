@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -50,33 +50,42 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Photos: cache-first, lazy fill. Pass network errors through so the
-  // browser can retry on subsequent loads instead of caching a stub.
+  // Photos rarely change — cache-first, lazy fill. Pass network errors
+  // through so the browser can retry on a subsequent load.
   if (url.pathname.includes('/assets/photos/')) {
-    event.respondWith(cacheFirst(request, PHOTO_CACHE, /*passThrough*/ true));
+    event.respondWith(cacheFirst(request, PHOTO_CACHE));
     return;
   }
 
-  // Everything else (shell): cache-first with network fallback
-  event.respondWith(cacheFirst(request, SHELL_CACHE, /*passThrough*/ false));
+  // Shell (HTML, CSS, JS, JSON, fonts, icons) — stale-while-revalidate.
+  // Returns cache instantly so the slideshow boots fast even on flaky
+  // wifi, while a background fetch refreshes the cache for the next load.
+  event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
 });
 
-async function cacheFirst(request, cacheName, passThrough) {
+async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
+  // No cache — go to network and let errors propagate naturally.
+  const response = await fetch(request);
+  if (response && response.status === 200) {
+    cache.put(request, response.clone());
+  }
+  return response;
+}
 
-  try {
-    const response = await fetch(request);
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  const fetchPromise = fetch(request).then((response) => {
     if (response && response.status === 200) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (err) {
-    if (passThrough) {
-      // Re-throw so respondWith rejects and the browser handles it normally.
-      throw err;
-    }
-    return new Response('', { status: 504, statusText: 'Offline' });
-  }
+  }).catch(() => null);
+
+  // Cached if we have it (fast path), else wait for the network.
+  return cached || fetchPromise;
 }
