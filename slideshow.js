@@ -1,154 +1,243 @@
 // ============================================================
-// Desk Quotes — Slideshow engine
+// Desk Quotes — slideshow + pomodoro + settings
 // ============================================================
 
-const CONFIG = {
-  slideDurationMs: 45_000,
-  crossfadeMs: 1500,
-  jitterPx: 2,
-  preloadAhead: 2,
-  quotesUrl: 'quotes.json',
+const QUOTES_URL = 'quotes.json';
+const STORAGE = {
+  settings: 'dq:settings',
+  pomodoro: 'dq:pomodoro',
 };
 
-const stage = document.getElementById('stage');
+// ----- Settings -------------------------------------------------------------
 
-// ----- Boot -----------------------------------------------------------------
+const DEFAULTS = {
+  slideDurationMs: 45_000,
+  workMinutes: 25,
+  breakMinutes: 5,
+  longBreakMinutes: 15,
+  cyclesBeforeLongBreak: 4,
+  soundEnabled: false,
+  pauseDuringWork: false, // slideshow keeps cycling during work by default
+};
 
-(async function boot() {
-  let quotes;
+const settings = (() => {
+  let state;
   try {
-    const res = await fetch(CONFIG.quotesUrl, { cache: 'no-cache' });
-    quotes = await res.json();
-  } catch (err) {
-    console.error('Failed to load quotes.json', err);
-    return;
+    state = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(STORAGE.settings)) || {}) };
+  } catch {
+    state = { ...DEFAULTS };
   }
-
-  if (!Array.isArray(quotes) || quotes.length === 0) {
-    console.error('quotes.json must be a non-empty array');
-    return;
-  }
-
-  const deck = new Deck(quotes);
-  await preload(deck.peek(CONFIG.preloadAhead));
-  run(deck);
-  registerServiceWorker();
+  return {
+    get: (k) => state[k],
+    set: (k, v) => {
+      state[k] = v;
+      try { localStorage.setItem(STORAGE.settings, JSON.stringify(state)); } catch {}
+    },
+    all: () => ({ ...state }),
+  };
 })();
 
-// ----- Deck (random shuffle, no repeats within a pass) ---------------------
+// ----- Pomodoro state machine ----------------------------------------------
 
-class Deck {
-  constructor(items) {
-    this.source = items;
-    this.queue = [];
-    this.refill();
+const POM = { IDLE: 'idle', WORK: 'work', BREAK: 'break', LONG: 'long_break' };
+
+const pomodoro = (() => {
+  const todayKey = () => new Date().toISOString().slice(0, 10);
+  let state;
+  try {
+    state = JSON.parse(localStorage.getItem(STORAGE.pomodoro)) || {};
+  } catch { state = {}; }
+
+  // Reset cycle count on a new day
+  if (state.lastDay !== todayKey()) {
+    state = { phase: POM.IDLE, endTime: null, completedToday: 0, lastDay: todayKey() };
+  } else if (!state.phase) {
+    state = { phase: POM.IDLE, endTime: null, completedToday: 0, lastDay: todayKey() };
   }
 
-  refill() {
-    const next = [...this.source];
-    // Fisher-Yates shuffle
-    for (let i = next.length - 1; i > 0; i--) {
+  const listeners = new Set();
+  const save = () => { try { localStorage.setItem(STORAGE.pomodoro, JSON.stringify(state)); } catch {} };
+  const emit = () => { for (const l of listeners) l(state); };
+
+  function start() {
+    state.phase = POM.WORK;
+    state.endTime = Date.now() + settings.get('workMinutes') * 60_000;
+    save(); emit();
+  }
+  function cancel() {
+    state.phase = POM.IDLE;
+    state.endTime = null;
+    save(); emit();
+  }
+  function advance() {
+    if (state.phase === POM.WORK) {
+      state.completedToday += 1;
+      const isLong = state.completedToday > 0 &&
+                     state.completedToday % settings.get('cyclesBeforeLongBreak') === 0;
+      state.phase = isLong ? POM.LONG : POM.BREAK;
+      const mins = isLong ? settings.get('longBreakMinutes') : settings.get('breakMinutes');
+      state.endTime = Date.now() + mins * 60_000;
+    } else if (state.phase === POM.BREAK || state.phase === POM.LONG) {
+      state.phase = POM.IDLE;
+      state.endTime = null;
+    }
+    save(); emit();
+  }
+
+  // Tick every second to detect phase end
+  setInterval(() => {
+    if (state.phase !== POM.IDLE && state.endTime && Date.now() >= state.endTime) {
+      chime(state.phase === POM.WORK ? 660 : 440);
+      advance();
+    } else if (state.phase !== POM.IDLE) {
+      // Periodic emit so UI can update progress bar
+      emit();
+    }
+  }, 1000);
+
+  return {
+    get state() { return state; },
+    get phase() { return state.phase; },
+    get endTime() { return state.endTime; },
+    get completedToday() { return state.completedToday; },
+    get totalDurationMs() {
+      const mins = state.phase === POM.WORK ? settings.get('workMinutes')
+                 : state.phase === POM.LONG ? settings.get('longBreakMinutes')
+                 : state.phase === POM.BREAK ? settings.get('breakMinutes')
+                 : 0;
+      return mins * 60_000;
+    },
+    get currentMood() {
+      if (state.phase === POM.WORK) return 'work';
+      if (state.phase === POM.BREAK || state.phase === POM.LONG) return 'rest';
+      return 'any';
+    },
+    start, cancel, advance,
+    toggle: () => state.phase === POM.IDLE ? start() : cancel(),
+    on: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+  };
+})();
+
+// ----- Audio (gentle sine chime, no asset) ---------------------------------
+
+let _audioCtx;
+function chime(freqHz) {
+  if (!settings.get('soundEnabled')) return;
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freqHz;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.6);
+    osc.start();
+    osc.stop(ctx.currentTime + 1.6);
+  } catch {}
+}
+
+// ----- Mood-aware deck -----------------------------------------------------
+
+class Deck {
+  constructor(allItems, getMood) {
+    this.allItems = allItems;
+    this.getMood = getMood;          // function returning 'work' | 'rest' | 'any'
+    this.queue = [];
+    this.lastDealt = null;
+    this.lastMood = null;
+  }
+
+  _refill() {
+    const mood = this.getMood();
+    const items = mood === 'any'
+      ? this.allItems.slice()
+      : this.allItems.filter((q) => q.mood === mood || q.mood === 'any');
+    if (items.length === 0) {
+      // Fallback if a mood has zero matches: use everything
+      items.push(...this.allItems);
+    }
+    for (let i = items.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [next[i], next[j]] = [next[j], next[i]];
+      [items[i], items[j]] = [items[j], items[i]];
     }
-    // Avoid back-to-back same item across refills
-    if (this.queue.length === 0 && next[0] && this._lastDealt &&
-        next[0].photoSlug === this._lastDealt.photoSlug && next.length > 1) {
-      [next[0], next[1]] = [next[1], next[0]];
+    if (this.lastDealt && items[0]?.photoSlug === this.lastDealt.photoSlug && items.length > 1) {
+      [items[0], items[1]] = [items[1], items[0]];
     }
-    this.queue.push(...next);
+    this.queue = items;
+    this.lastMood = mood;
   }
 
   next() {
-    if (this.queue.length === 0) this.refill();
+    const mood = this.getMood();
+    if (mood !== this.lastMood || this.queue.length === 0) this._refill();
     const item = this.queue.shift();
-    this._lastDealt = item;
+    this.lastDealt = item;
     return item;
   }
 
   peek(n) {
-    while (this.queue.length < n) this.refill();
-    return this.queue.slice(0, n);
+    const out = [];
+    let i = 0;
+    while (out.length < n && i < this.queue.length) out.push(this.queue[i++]);
+    return out;
   }
 }
 
-// ----- Image preloading ----------------------------------------------------
+// ----- Image preload -------------------------------------------------------
 
 const imageCache = new Map();
-
-function preload(items) {
-  return Promise.all(items.map(item => loadImage(item.photo || `assets/photos/${item.photoSlug}.jpg`)));
-}
-
 function loadImage(src) {
-  // Don't permanently cache failures — a transient blip shouldn't poison
-  // a slot for the rest of the session.
   const cached = imageCache.get(src);
   if (cached) return cached;
   const p = new Promise((resolve) => {
     const img = new Image();
     img.decoding = 'async';
     img.onload = () => resolve(img);
-    img.onerror = () => {
-      imageCache.delete(src);
-      resolve(null);
-    };
+    img.onerror = () => { imageCache.delete(src); resolve(null); };
     img.src = src;
   });
   imageCache.set(src, p);
   return p;
 }
 
-// ----- Render & cycle ------------------------------------------------------
+// ----- Slideshow renderer --------------------------------------------------
 
-function run(deck) {
-  let currentSlide = null;
+const stage = document.getElementById('stage');
 
-  showNext();
-  setInterval(showNext, CONFIG.slideDurationMs);
+async function showNext(deck, ctx, retryDepth = 0) {
+  const item = deck.next();
+  const photoSrc = item.photo || `assets/photos/${item.photoSlug}.jpg`;
+  const img = await loadImage(photoSrc);
+  if (!img && retryDepth < 5) return showNext(deck, ctx, retryDepth + 1);
 
-  async function showNext(retryDepth = 0) {
-    const item = deck.next();
-    const photoSrc = item.photo || `assets/photos/${item.photoSlug}.jpg`;
+  const slide = renderSlide(item);
+  stage.appendChild(slide);
 
-    // Wait for the photo to be ready (either from cache or network) before
-    // committing the slide. If it can't load, skip to the next item — but
-    // bail out after a few attempts so we don't infinite-loop on a fully
-    // offline device.
-    const img = await loadImage(photoSrc);
-    if (!img && retryDepth < 5) {
-      return showNext(retryDepth + 1);
-    }
+  requestAnimationFrame(() => requestAnimationFrame(() => slide.classList.add('is-active')));
 
-    const slide = renderSlide(item);
-    stage.appendChild(slide);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        slide.classList.add('is-active');
-      });
-    });
-
-    if (currentSlide) {
-      const prev = currentSlide;
-      prev.classList.remove('is-active');
-      prev.classList.add('is-leaving');
-      setTimeout(() => prev.remove(), CONFIG.crossfadeMs + 200);
-    }
-
-    currentSlide = slide;
-
-    preload(deck.peek(CONFIG.preloadAhead));
+  if (ctx.current) {
+    const prev = ctx.current;
+    prev.classList.remove('is-active');
+    prev.classList.add('is-leaving');
+    setTimeout(() => prev.remove(), 1700);
   }
+  ctx.current = slide;
+
+  // Preload next two
+  const upcoming = deck.peek(2);
+  for (const u of upcoming) loadImage(u.photo || `assets/photos/${u.photoSlug}.jpg`);
 }
 
 function renderSlide(item) {
   const slide = document.createElement('article');
   slide.className = 'slide';
 
-  // Anti-burn-in: random subtle position jitter
-  const jx = (Math.random() - 0.5) * 2 * CONFIG.jitterPx;
-  const jy = (Math.random() - 0.5) * 2 * CONFIG.jitterPx;
+  const jx = (Math.random() - 0.5) * 4;
+  const jy = (Math.random() - 0.5) * 4;
   slide.style.setProperty('--jitter-x', `${jx.toFixed(1)}px`);
   slide.style.setProperty('--jitter-y', `${jy.toFixed(1)}px`);
 
@@ -161,7 +250,6 @@ function renderSlide(item) {
   img.alt = '';
   img.loading = 'eager';
   img.decoding = 'async';
-  // Per-image crop override (optional in quotes.json), e.g. "objectPosition": "center 30%"
   if (item.objectPosition) img.style.objectPosition = item.objectPosition;
   photoWrap.appendChild(img);
 
@@ -184,10 +272,10 @@ function renderSlide(item) {
 
   const meta = document.createElement('p');
   meta.className = 'text__meta';
-  const metaParts = [];
-  if (item.dates) metaParts.push(escapeHtml(item.dates));
-  if (item.role) metaParts.push(escapeHtml(item.role));
-  meta.innerHTML = metaParts.join('<span class="text__meta-dot">·</span>');
+  const parts = [];
+  if (item.dates) parts.push(escapeHtml(item.dates));
+  if (item.role) parts.push(escapeHtml(item.role));
+  meta.innerHTML = parts.join('<span class="text__meta-dot">·</span>');
   text.appendChild(meta);
 
   slide.appendChild(photoWrap);
@@ -195,49 +283,230 @@ function renderSlide(item) {
   return slide;
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ----- Service worker (offline support) ------------------------------------
+// ----- UI: corner dots, progress bar, cycle dots, body palette ------------
 
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch((err) => {
-      console.warn('Service worker registration failed:', err);
+const ui = (() => {
+  const ctrlPom = document.getElementById('ctrl-pomodoro');
+  const ctrlSet = document.getElementById('ctrl-settings');
+  const progress = document.getElementById('progress');
+  const fill = progress.querySelector('.progress__fill');
+  const cyclesEl = document.getElementById('cycles');
+
+  function update() {
+    const phase = pomodoro.phase;
+
+    // Pomodoro dot color
+    ctrlPom.classList.toggle('is-work', phase === POM.WORK);
+    ctrlPom.classList.toggle('is-break', phase === POM.BREAK || phase === POM.LONG);
+    ctrlPom.setAttribute('aria-label',
+      phase === POM.IDLE ? 'Start pomodoro' : 'Cancel pomodoro');
+
+    // Progress bar
+    if (phase === POM.IDLE) {
+      progress.classList.remove('is-active', 'is-break');
+      fill.style.width = '0%';
+    } else {
+      progress.classList.add('is-active');
+      progress.classList.toggle('is-break', phase !== POM.WORK);
+      const total = pomodoro.totalDurationMs;
+      const elapsed = total - Math.max(0, pomodoro.endTime - Date.now());
+      const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
+      fill.style.width = `${pct.toFixed(2)}%`;
+    }
+
+    // Body palette for break
+    document.body.classList.toggle('is-break',
+      phase === POM.BREAK || phase === POM.LONG);
+
+    // Cycle dots
+    const max = settings.get('cyclesBeforeLongBreak');
+    const filled = pomodoro.completedToday % max;
+    const showCycles = phase !== POM.IDLE || filled > 0;
+    cyclesEl.classList.toggle('is-visible', showCycles);
+    if (cyclesEl.children.length !== max) {
+      cyclesEl.innerHTML = '';
+      for (let i = 0; i < max; i++) {
+        const d = document.createElement('span');
+        d.className = 'cycles__dot';
+        cyclesEl.appendChild(d);
+      }
+    }
+    [...cyclesEl.children].forEach((d, i) => {
+      d.classList.toggle('is-filled', i < filled);
     });
   }
+
+  ctrlPom.addEventListener('click', () => pomodoro.toggle());
+  ctrlSet.addEventListener('click', () => settingsPanel.open());
+
+  pomodoro.on(update);
+  update();
+  return { update };
+})();
+
+// ----- Settings panel (built lazily on first open) -------------------------
+
+const settingsPanel = (() => {
+  let root = null;
+
+  function build() {
+    root = document.createElement('div');
+    root.className = 'settings';
+    root.innerHTML = `
+      <div class="settings__panel" role="dialog" aria-label="Settings">
+        <button class="settings__close" type="button" aria-label="Close">×</button>
+        <h2 class="settings__title">Settings</h2>
+
+        <div class="settings__section">
+          <div class="settings__section-title">Slideshow</div>
+          <div class="settings__row">
+            <span class="settings__label">Slide duration</span>
+            <span class="settings__value" data-key="slideDurationMs"
+              data-options="30000:30s|45000:45s|60000:1m|90000:90s"></span>
+          </div>
+        </div>
+
+        <div class="settings__section">
+          <div class="settings__section-title">Pomodoro</div>
+          <div class="settings__row">
+            <span class="settings__label">Work</span>
+            <span class="settings__value" data-key="workMinutes"
+              data-options="25:25m|50:50m|90:90m"></span>
+          </div>
+          <div class="settings__row">
+            <span class="settings__label">Break</span>
+            <span class="settings__value" data-key="breakMinutes"
+              data-options="5:5m|10:10m|15:15m"></span>
+          </div>
+          <div class="settings__row">
+            <span class="settings__label">Long break</span>
+            <span class="settings__value" data-key="longBreakMinutes"
+              data-options="15:15m|20:20m|30:30m"></span>
+          </div>
+          <div class="settings__row">
+            <span class="settings__label">Cycles before long break</span>
+            <span class="settings__value" data-key="cyclesBeforeLongBreak"
+              data-options="3:3|4:4|5:5"></span>
+          </div>
+          <div class="settings__row">
+            <span class="settings__label">Sound on transitions</span>
+            <span class="settings__value" data-key="soundEnabled"
+              data-options="false:Off|true:On"></span>
+          </div>
+        </div>
+
+        <p class="settings__hint">
+          Tap the dot in the upper-right corner to start a pomodoro.
+          The slideshow keeps cycling but shifts to a working mood; on the
+          break the palette warms and the quotes turn reflective.
+        </p>
+      </div>`;
+
+    // Wire chips
+    root.querySelectorAll('.settings__value').forEach((wrap) => {
+      const key = wrap.dataset.key;
+      const opts = wrap.dataset.options.split('|').map((s) => {
+        const [v, label] = s.split(':');
+        return { v, label };
+      });
+      for (const { v, label } of opts) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'settings__chip';
+        btn.textContent = label;
+        btn.dataset.value = v;
+        btn.addEventListener('click', () => {
+          const parsed = v === 'true' ? true : v === 'false' ? false : Number(v);
+          settings.set(key, parsed);
+          syncChips();
+          ui.update();
+        });
+        wrap.appendChild(btn);
+      }
+    });
+
+    function syncChips() {
+      root.querySelectorAll('.settings__value').forEach((wrap) => {
+        const key = wrap.dataset.key;
+        const current = String(settings.get(key));
+        wrap.querySelectorAll('.settings__chip').forEach((b) => {
+          b.classList.toggle('is-on', b.dataset.value === current);
+        });
+      });
+    }
+    root._sync = syncChips;
+
+    // Close interactions
+    root.querySelector('.settings__close').addEventListener('click', close);
+    root.addEventListener('click', (e) => { if (e.target === root) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && root.classList.contains('is-open')) close();
+    });
+
+    document.body.appendChild(root);
+  }
+
+  function open() {
+    if (!root) build();
+    root._sync();
+    root.classList.add('is-open');
+  }
+  function close() {
+    if (root) root.classList.remove('is-open');
+  }
+  return { open, close };
+})();
+
+// ----- Service worker ------------------------------------------------------
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
 }
 
-// ----- Tap to advance ------------------------------------------------------
-// Single tap anywhere advances to the next slide. Double-tap is reserved.
-
-let lastTap = 0;
-document.addEventListener('click', () => {
-  const now = Date.now();
-  if (now - lastTap < 300) return; // ignore rapid double tap
-  lastTap = now;
-  // dispatch a custom event the cycle can listen to — kept simple by reloading the interval
-  // Easiest: reload the page-style approach is too heavy. Just trigger by faking the timer.
-  // For simplicity, we'll just reload the cycle by clearing intervals — but we don't have
-  // a handle here. Skip for now: tap = no-op. (Reserved for v2.)
-});
-
-// ----- Wake-lock (best-effort, may be no-op without HTTPS or user gesture) -
+// ----- Wake lock (best-effort) ---------------------------------------------
 
 async function requestWakeLock() {
   if ('wakeLock' in navigator) {
-    try {
-      await navigator.wakeLock.request('screen');
-    } catch (_) {
-      // The OS-level "Stay awake while charging" handles this; not critical.
-    }
+    try { await navigator.wakeLock.request('screen'); } catch {}
   }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') requestWakeLock();
 });
 requestWakeLock();
+
+// ----- Boot ----------------------------------------------------------------
+
+(async function boot() {
+  let quotes;
+  try {
+    const res = await fetch(QUOTES_URL, { cache: 'no-cache' });
+    quotes = await res.json();
+  } catch (err) {
+    console.error('Failed to load quotes.json', err);
+    return;
+  }
+  if (!Array.isArray(quotes) || quotes.length === 0) return;
+
+  const deck = new Deck(quotes, () => pomodoro.currentMood);
+  const ctx = { current: null };
+
+  await loadImage(`assets/photos/${quotes[0].photoSlug}.jpg`);
+  showNext(deck, ctx);
+
+  // Recursive setTimeout so a slide-duration change in settings takes
+  // effect on the next cycle without needing a reload.
+  function scheduleNext() {
+    setTimeout(() => {
+      if (!(settings.get('pauseDuringWork') && pomodoro.phase === POM.WORK)) {
+        showNext(deck, ctx);
+      }
+      scheduleNext();
+    }, settings.get('slideDurationMs'));
+  }
+  scheduleNext();
+})();

@@ -238,6 +238,242 @@ body {
 }
 
 /* ------------------------------------------------------------
+   Persistent UI: corner controls, progress bar, cycle dots
+   ------------------------------------------------------------ */
+
+.ctrl {
+  position: fixed;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  padding: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  z-index: 10;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ctrl::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.55;
+  transition: background 600ms ease, opacity 600ms ease, transform 200ms ease;
+}
+
+.ctrl:active::before { transform: scale(0.85); }
+
+.ctrl--settings { left: 0; }
+.ctrl--pomodoro { right: 0; }
+
+.ctrl--pomodoro.is-work::before {
+  background: var(--ink);
+  opacity: 1;
+}
+.ctrl--pomodoro.is-break::before {
+  background: #B8895C;
+  opacity: 1;
+}
+
+/* Hairline progress bar at very top */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.progress.is-active { opacity: 1; }
+
+.progress__fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ink);
+  transition: width 1s linear, background 600ms ease;
+}
+
+.progress.is-break .progress__fill {
+  background: #B8895C;
+}
+
+/* Cycle dots — small ••• row under the pomodoro control */
+.cycles {
+  position: fixed;
+  top: 38px;
+  right: 18px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 600ms ease;
+  pointer-events: none;
+}
+
+.cycles.is-visible { opacity: 1; }
+
+.cycles__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.3;
+  transition: opacity 400ms ease, background 400ms ease;
+}
+
+.cycles__dot.is-filled {
+  opacity: 0.85;
+  background: var(--ink);
+}
+
+/* ------------------------------------------------------------
+   Break-mode palette shift (cream -> warm amber)
+   ------------------------------------------------------------ */
+
+body.is-break {
+  background: #F4ECDB;
+}
+body.is-break .text { background: #F4ECDB; }
+body.is-break .photo::after {
+  background: linear-gradient(to bottom,
+    rgba(244, 236, 219, 0) 0%,
+    rgba(244, 236, 219, 0.4) 60%,
+    rgba(244, 236, 219, 1) 100%);
+}
+body.is-break .photo__img {
+  filter: grayscale(1) contrast(1.02) brightness(0.94) sepia(0.18);
+}
+
+body { transition: background 1800ms ease; }
+.text { transition: background 1800ms ease; }
+.photo::after { transition: background 1800ms ease; }
+.photo__img { transition: filter 1800ms ease, transform var(--kenburns) linear; }
+
+/* ------------------------------------------------------------
+   Settings panel — slide-up modal, editorial styling
+   ------------------------------------------------------------ */
+
+.settings {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(26, 26, 26, 0.32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.settings.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settings__panel {
+  width: min(560px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 6vh 7vw 5vh;
+  transform: translateY(20px);
+  transition: transform 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+.settings.is-open .settings__panel { transform: translateY(0); }
+
+.settings__title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.6em;
+}
+
+.settings__close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: transparent;
+  border: 0;
+  font-size: 24px;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 8px 12px;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.settings__section {
+  margin-top: 2.4em;
+}
+
+.settings__section-title {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.1em;
+  font-weight: 400;
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-top: 1px solid var(--hair);
+  font-size: 17px;
+}
+
+.settings__row:last-child { border-bottom: 1px solid var(--hair); }
+
+.settings__label { color: var(--ink); }
+
+.settings__value {
+  display: flex;
+  gap: 6px;
+}
+
+.settings__chip {
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 15px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings__chip:hover { color: var(--ink); }
+
+.settings__chip.is-on {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.settings__hint {
+  margin-top: 2.6em;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------
    High-DPI tweaks
    ------------------------------------------------------------ */
 

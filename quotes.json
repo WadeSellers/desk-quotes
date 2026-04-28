@@ -7,7 +7,8 @@
     "category": "tech",
     "photoSlug": "turing",
     "wikiTitle": "Alan_Turing",
-    "source": "Computing Machinery and Intelligence, 1950"
+    "source": "Computing Machinery and Intelligence, 1950",
+    "mood": "work"
   },
   {
     "quote": "The most damaging phrase in the language is: it's always been done that way.",
@@ -17,7 +18,8 @@
     "category": "tech",
     "photoSlug": "hopper",
     "wikiTitle": "Grace_Hopper",
-    "source": ""
+    "source": "",
+    "mood": "any"
   },
   {
     "quote": "That brain of mine is something more than merely mortal, as time will show.",
@@ -27,7 +29,8 @@
     "category": "tech",
     "photoSlug": "lovelace",
     "wikiTitle": "Ada_Lovelace",
-    "source": "Letter to her mother, 1843"
+    "source": "Letter to her mother, 1843",
+    "mood": "rest"
   },
   {
     "quote": "Stay hungry. Stay foolish.",
@@ -37,7 +40,8 @@
     "category": "tech",
     "photoSlug": "jobs",
     "wikiTitle": "Steve_Jobs",
-    "source": "Stanford Commencement, 2005"
+    "source": "Stanford Commencement, 2005",
+    "mood": "any"
   },
   {
     "quote": "The web does not just connect machines, it connects people.",
@@ -47,7 +51,8 @@
     "category": "tech",
     "photoSlug": "berners-lee",
     "wikiTitle": "Tim_Berners-Lee",
-    "source": ""
+    "source": "",
+    "mood": "any"
   },
   {
     "quote": "Focused, hard work is the real key to success. Keep your eyes on the goal, and just keep taking the next step.",
@@ -57,7 +62,8 @@
     "category": "tech",
     "photoSlug": "carmack",
     "wikiTitle": "John_Carmack",
-    "source": ""
+    "source": "",
+    "mood": "work"
   },
   {
     "quote": "There was no choice but to be pioneers.",
@@ -67,7 +73,8 @@
     "category": "tech",
     "photoSlug": "hamilton",
     "wikiTitle": "Margaret_Hamilton_(software_engineer)",
-    "source": ""
+    "source": "",
+    "mood": "any"
   },
   {
     "quote": "The present is theirs; the future, for which I really worked, is mine.",
@@ -77,7 +84,8 @@
     "category": "tech",
     "photoSlug": "tesla",
     "wikiTitle": "Nikola_Tesla",
-    "source": ""
+    "source": "",
+    "mood": "rest"
   },
   {
     "quote": "Premature optimization is the root of all evil.",
@@ -87,7 +95,8 @@
     "category": "tech",
     "photoSlug": "knuth",
     "wikiTitle": "Donald_Knuth",
-    "source": "Structured Programming with go to Statements, 1974"
+    "source": "Structured Programming with go to Statements, 1974",
+    "mood": "work"
   },
   {
     "quote": "Simplicity is prerequisite for reliability.",
@@ -97,7 +106,8 @@
     "category": "tech",
     "photoSlug": "dijkstra",
     "wikiTitle": "Edsger_W._Dijkstra",
-    "source": "EWD498, 1975"
+    "source": "EWD498, 1975",
+    "mood": "work"
   },
   {
     "quote": "The Internet is for everyone.",
@@ -107,7 +117,8 @@
     "category": "tech",
     "photoSlug": "cerf",
     "wikiTitle": "Vint_Cerf",
-    "source": "RFC 3271, 2002"
+    "source": "RFC 3271, 2002",
+    "mood": "any"
   },
   {
     "quote": "Talk is cheap. Show me the code.",
@@ -117,7 +128,8 @@
     "category": "tech",
     "photoSlug": "torvalds",
     "wikiTitle": "Linus_Torvalds",
-    "source": "Linux mailing list, 2000"
+    "source": "Linux mailing list, 2000",
+    "mood": "work"
   },
   {
     "quote": "I just wondered how things were put together.",
@@ -127,9 +139,9 @@
     "category": "tech",
     "photoSlug": "shannon",
     "wikiTitle": "Claude_Shannon",
-    "source": ""
+    "source": "",
+    "mood": "any"
   },
-
   {
     "quote": "Imagination is more important than knowledge. Knowledge is limited. Imagination encircles the world.",
     "name": "Albert Einstein",
@@ -138,7 +150,8 @@
     "category": "science",
     "photoSlug": "einstein",
     "wikiTitle": "Albert_Einstein",
-    "source": "Saturday Evening Post, 1929"
+    "source": "Saturday Evening Post, 1929",
+    "mood": "any"
   },
   {
     "quote": "The first principle is that you must not fool yourself — and you are the easiest person to fool.",
@@ -148,7 +161,8 @@
     "category": "science",
     "photoSlug": "feynman",
     "wikiTitle": "Richard_Feynman",
-    "source": "Caltech Commencement, 1974"
+    "source": "Caltech Commencement, 1974",
+    "mood": "work"
   },
   {
     "quote": "Nothing in life is to be feared, it is only to be understood. Now is the time to understand more, so that we may fear less.",
@@ -158,7 +172,8 @@
     "category": "science",
     "photoSlug": "curie",
     "wikiTitle": "Marie_Curie",
-    "source": ""
+    "source": "",
+    "mood": "rest"
   },
   {
     "quote": "Somewhere, something incredible is waiting to be known.",
@@ -168,7 +183,8 @@
     "category": "science",
     "photoSlug": "sagan",
     "wikiTitle": "Carl_Sagan",
-    "source": ""
+    "source": "",
+    "mood": "rest"
   },
   {
     "quote": "Look up at the stars and not down at your feet. Try to make sense of what you see, and wonder about what makes the universe exist. Be curious.",
@@ -178,7 +194,8 @@
     "category": "science",
     "photoSlug": "hawking",
     "wikiTitle": "Stephen_Hawking",
-    "source": ""
+    "source": "",
+    "mood": "rest"
   },
   {
     "quote": "What you do makes a difference, and you have to decide what kind of difference you want to make.",
@@ -188,7 +205,8 @@
     "category": "science",
     "photoSlug": "goodall",
     "wikiTitle": "Jane_Goodall",
-    "source": ""
+    "source": "",
+    "mood": "work"
   },
   {
     "quote": "If I had my life to live over again, I would have made a rule to read some poetry and listen to some music at least once every week.",
@@ -198,7 +216,8 @@
     "category": "science",
     "photoSlug": "darwin",
     "wikiTitle": "Charles_Darwin",
-    "source": "Autobiography, 1876"
+    "source": "Autobiography, 1876",
+    "mood": "rest"
   },
   {
     "quote": "I do not feel obliged to believe that the same God who has endowed us with sense, reason, and intellect has intended us to forgo their use.",
@@ -208,7 +227,8 @@
     "category": "science",
     "photoSlug": "galileo",
     "wikiTitle": "Galileo_Galilei",
-    "source": "Letter to the Grand Duchess Christina, 1615"
+    "source": "Letter to the Grand Duchess Christina, 1615",
+    "mood": "any"
   },
   {
     "quote": "If I have seen further it is by standing on the shoulders of giants.",
@@ -218,7 +238,8 @@
     "category": "science",
     "photoSlug": "newton",
     "wikiTitle": "Isaac_Newton",
-    "source": "Letter to Robert Hooke, 1675"
+    "source": "Letter to Robert Hooke, 1675",
+    "mood": "work"
   },
   {
     "quote": "An expert is a person who has made all the mistakes that can be made in a very narrow field.",
@@ -228,7 +249,8 @@
     "category": "science",
     "photoSlug": "bohr",
     "wikiTitle": "Niels_Bohr",
-    "source": ""
+    "source": "",
+    "mood": "work"
   },
   {
     "quote": "The good thing about science is that it's true whether or not you believe in it.",
@@ -238,7 +260,8 @@
     "category": "science",
     "photoSlug": "tyson",
     "wikiTitle": "Neil_deGrasse_Tyson",
-    "source": ""
+    "source": "",
+    "mood": "any"
   },
   {
     "quote": "Science and everyday life cannot and should not be separated.",
@@ -248,7 +271,8 @@
     "category": "science",
     "photoSlug": "franklin",
     "wikiTitle": "Rosalind_Franklin",
-    "source": "Letter, 1940"
+    "source": "Letter, 1940",
+    "mood": "any"
   },
   {
     "quote": "In nature nothing exists alone.",
@@ -258,9 +282,9 @@
     "category": "science",
     "photoSlug": "carson",
     "wikiTitle": "Rachel_Carson",
-    "source": "Silent Spring, 1962"
+    "source": "Silent Spring, 1962",
+    "mood": "rest"
   },
-
   {
     "quote": "You have power over your mind — not outside events. Realize this, and you will find strength.",
     "name": "Marcus Aurelius",
@@ -269,7 +293,8 @@
     "category": "philosophy",
     "photoSlug": "aurelius",
     "wikiTitle": "Marcus_Aurelius",
-    "source": "Meditations"
+    "source": "Meditations",
+    "mood": "work"
   },
   {
     "quote": "First say to yourself what you would be; and then do what you have to do.",
@@ -279,7 +304,8 @@
     "category": "philosophy",
     "photoSlug": "epictetus",
     "wikiTitle": "Epictetus",
-    "source": "Discourses"
+    "source": "Discourses",
+    "mood": "work"
   },
   {
     "quote": "We suffer more often in imagination than in reality.",
@@ -289,7 +315,8 @@
     "category": "philosophy",
     "photoSlug": "seneca",
     "wikiTitle": "Seneca_the_Younger",
-    "source": "Letters from a Stoic, XIII"
+    "source": "Letters from a Stoic, XIII",
+    "mood": "any"
   },
   {
     "quote": "Nothing great was ever achieved without enthusiasm.",
@@ -299,7 +326,8 @@
     "category": "philosophy",
     "photoSlug": "emerson",
     "wikiTitle": "Ralph_Waldo_Emerson",
-    "source": "Essays: Second Series, Circles, 1844"
+    "source": "Essays: Second Series, Circles, 1844",
+    "mood": "work"
   },
   {
     "quote": "If one advances confidently in the direction of his dreams, and endeavors to live the life which he has imagined, he will meet with a success unexpected in common hours.",
@@ -309,7 +337,8 @@
     "category": "philosophy",
     "photoSlug": "thoreau",
     "wikiTitle": "Henry_David_Thoreau",
-    "source": "Walden, 1854"
+    "source": "Walden, 1854",
+    "mood": "rest"
   },
   {
     "quote": "There is no greater agony than bearing an untold story inside you.",
@@ -319,7 +348,8 @@
     "category": "philosophy",
     "photoSlug": "angelou",
     "wikiTitle": "Maya_Angelou",
-    "source": "I Know Why the Caged Bird Sings, 1969"
+    "source": "I Know Why the Caged Bird Sings, 1969",
+    "mood": "any"
   },
   {
     "quote": "The wound is the place where the Light enters you.",
@@ -329,7 +359,8 @@
     "category": "philosophy",
     "photoSlug": "rumi",
     "wikiTitle": "Rumi",
-    "source": "Trans. Coleman Barks"
+    "source": "Trans. Coleman Barks",
+    "mood": "rest"
   },
   {
     "quote": "A journey of a thousand miles begins with a single step.",
@@ -339,7 +370,8 @@
     "category": "philosophy",
     "photoSlug": "laotzu",
     "wikiTitle": "Laozi",
-    "source": "Tao Te Ching, ch. 64"
+    "source": "Tao Te Ching, ch. 64",
+    "mood": "work"
   },
   {
     "quote": "Real knowledge is to know the extent of one's ignorance.",
@@ -349,7 +381,8 @@
     "category": "philosophy",
     "photoSlug": "confucius",
     "wikiTitle": "Confucius",
-    "source": "Analects"
+    "source": "Analects",
+    "mood": "any"
   },
   {
     "quote": "The only true wisdom is in knowing you know nothing.",
@@ -359,7 +392,8 @@
     "category": "philosophy",
     "photoSlug": "socrates",
     "wikiTitle": "Socrates",
-    "source": "Plato, Apology"
+    "source": "Plato, Apology",
+    "mood": "any"
   },
   {
     "quote": "He who has a why to live for can bear almost any how.",
@@ -369,7 +403,8 @@
     "category": "philosophy",
     "photoSlug": "nietzsche",
     "wikiTitle": "Friedrich_Nietzsche",
-    "source": "Twilight of the Idols, 1889"
+    "source": "Twilight of the Idols, 1889",
+    "mood": "any"
   },
   {
     "quote": "When we are no longer able to change a situation, we are challenged to change ourselves.",
@@ -379,7 +414,8 @@
     "category": "philosophy",
     "photoSlug": "frankl",
     "wikiTitle": "Viktor_Frankl",
-    "source": "Man's Search for Meaning, 1946"
+    "source": "Man's Search for Meaning, 1946",
+    "mood": "any"
   },
   {
     "quote": "Be patient toward all that is unsolved in your heart and try to love the questions themselves.",
@@ -389,7 +425,8 @@
     "category": "philosophy",
     "photoSlug": "rilke",
     "wikiTitle": "Rainer_Maria_Rilke",
-    "source": "Letters to a Young Poet, 1903"
+    "source": "Letters to a Young Poet, 1903",
+    "mood": "rest"
   },
   {
     "quote": "If there's a book that you want to read, but it hasn't been written yet, then you must write it.",
@@ -399,6 +436,7 @@
     "category": "philosophy",
     "photoSlug": "morrison",
     "wikiTitle": "Toni_Morrison",
-    "source": "Speech, Ohio Arts Council, 1981"
+    "source": "Speech, Ohio Arts Council, 1981",
+    "mood": "work"
   }
 ]
