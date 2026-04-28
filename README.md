@@ -2,7 +2,9 @@
 
 An always-on motivational slideshow for an unused tablet. Editorial-minimalist design, hand-curated quotes from forty thinkers, scientists, and writers, set-and-forget on any vertical Android tablet.
 
-Live: `https://wadesellers.github.io/desk-quotes/`
+Live: **https://wadesellers.com/desk-quotes/**
+
+> First-time deploy note: GitHub Pages takes 15–30 minutes after the first push to provision the HTTPS certificate for the custom domain. Until then the site is reachable over HTTP only, and PWA install / service worker won't fully work. Once HTTPS is live, run `gh api -X PUT /repos/WadeSellers/desk-quotes/pages -F https_enforced=true` to lock it in.
 
 ---
 
@@ -27,7 +29,7 @@ A static web app — pure HTML/CSS/JS, no framework, no backend. It crossfades t
    **Settings → Display → Screen timeout → max value (often "10 minutes" or longer).**
 5. Lock orientation:
    **Settings → Display → Auto-rotate → off, set portrait.**
-6. Open Chrome and go to `https://wadesellers.github.io/desk-quotes/`.
+6. Open Chrome and go to `https://wadesellers.com/desk-quotes/`.
 7. Wait ~10 seconds for the first photo to load and the slideshow to start.
 8. Tap the **⋮** menu in Chrome → **"Add to Home Screen"** → **"Install"**.
 9. Close Chrome, open the new "Desk Quotes" icon from the home screen — it launches fullscreen.
