@@ -1,0 +1,249 @@
+/* ============================================================
+   Desk Quotes — Editorial Minimalist Slideshow
+   ============================================================ */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('assets/fonts/latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('assets/fonts/latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('assets/fonts/latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --bg:     #FAF7F0;   /* warm cream */
+  --ink:    #1A1A1A;   /* rich black */
+  --muted:  #8B7355;   /* warm ochre */
+  --hair:   rgba(26, 26, 26, 0.12);
+
+  --crossfade: 1500ms;
+  --kenburns:  35s;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'EB Garamond', 'Garamond', Georgia, serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: none;
+  /* Prevent overscroll/pull-to-refresh */
+  overscroll-behavior: none;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------
+   Slide
+   ------------------------------------------------------------ */
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 58fr 42fr;
+  opacity: 0;
+  transition: opacity var(--crossfade) ease;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+.slide.is-active {
+  opacity: 1;
+  z-index: 2;
+}
+
+.slide.is-leaving {
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------
+   Photo
+   ------------------------------------------------------------ */
+
+.photo {
+  position: relative;
+  overflow: hidden;
+  background: #1F1B17;
+}
+
+.photo__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  filter: grayscale(1) contrast(1.04) brightness(0.97);
+  transform: scale(1);
+  transition: transform var(--kenburns) linear;
+  will-change: transform;
+}
+
+.slide.is-active .photo__img {
+  transform: scale(1.06);
+}
+
+/* Bottom fade into cream */
+.photo::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 14vh;
+  background: linear-gradient(to bottom,
+    rgba(250, 247, 240, 0) 0%,
+    rgba(250, 247, 240, 0.4) 60%,
+    rgba(250, 247, 240, 1) 100%);
+  pointer-events: none;
+}
+
+/* Subtle film grain overlay (CSS-only, no image needed) */
+.photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                    radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px;
+  background-position: 0 0, 1px 2px;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------
+   Text block
+   ------------------------------------------------------------ */
+
+.text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4vh 9vw 6vh;
+  text-align: center;
+  background: var(--bg);
+}
+
+.text__quote {
+  font-size: clamp(22px, 4.2vh, 52px);
+  line-height: 1.42;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink);
+  max-width: 22ch;
+  margin-bottom: 4.2vh;
+  hyphens: auto;
+  text-wrap: balance;
+}
+
+.text__rule {
+  width: 32px;
+  height: 1px;
+  background: var(--muted);
+  opacity: 0.55;
+  margin-bottom: 2.4vh;
+}
+
+.text__name {
+  font-size: clamp(18px, 2.6vh, 30px);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  margin-bottom: 0.9vh;
+  color: var(--ink);
+}
+
+.text__meta {
+  font-size: clamp(11px, 1.4vh, 15px);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.text__meta-dot {
+  display: inline-block;
+  margin: 0 0.7em;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------
+   Loading state (first paint, before any slide rendered)
+   ------------------------------------------------------------ */
+
+#stage:empty::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
+
+/* ------------------------------------------------------------
+   Landscape fallback (warning if tablet isn't rotated)
+   ------------------------------------------------------------ */
+
+@media (orientation: landscape) and (max-aspect-ratio: 16/10) {
+  /* tablets with near-square aspect — still allow */
+}
+
+/* ------------------------------------------------------------
+   Anti-burn-in: subtle text-position jitter per slide
+   (controlled via CSS custom property set by JS)
+   ------------------------------------------------------------ */
+
+.slide {
+  --jitter-x: 0px;
+  --jitter-y: 0px;
+}
+
+.text {
+  transform: translate(var(--jitter-x), var(--jitter-y));
+}
+
+/* ------------------------------------------------------------
+   High-DPI tweaks
+   ------------------------------------------------------------ */
+
+@media (min-resolution: 2dppx) {
+  .photo__img {
+    /* Slightly less aggressive grayscale on retina to preserve detail */
+    filter: grayscale(1) contrast(1.03) brightness(0.98);
+  }
+}

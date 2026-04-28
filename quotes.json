@@ -1,0 +1,404 @@
+[
+  {
+    "quote": "We can only see a short distance ahead, but we can see plenty there that needs to be done.",
+    "name": "Alan Turing",
+    "dates": "1912–1954",
+    "role": "Mathematician & Computer Scientist",
+    "category": "tech",
+    "photoSlug": "turing",
+    "wikiTitle": "Alan_Turing",
+    "source": "Computing Machinery and Intelligence, 1950"
+  },
+  {
+    "quote": "The most damaging phrase in the language is: it's always been done that way.",
+    "name": "Grace Hopper",
+    "dates": "1906–1992",
+    "role": "Computer Scientist & Rear Admiral",
+    "category": "tech",
+    "photoSlug": "hopper",
+    "wikiTitle": "Grace_Hopper",
+    "source": ""
+  },
+  {
+    "quote": "That brain of mine is something more than merely mortal, as time will show.",
+    "name": "Ada Lovelace",
+    "dates": "1815–1852",
+    "role": "Mathematician",
+    "category": "tech",
+    "photoSlug": "lovelace",
+    "wikiTitle": "Ada_Lovelace",
+    "source": "Letter to her mother, 1843"
+  },
+  {
+    "quote": "Stay hungry. Stay foolish.",
+    "name": "Steve Jobs",
+    "dates": "1955–2011",
+    "role": "Co-founder, Apple",
+    "category": "tech",
+    "photoSlug": "jobs",
+    "wikiTitle": "Steve_Jobs",
+    "source": "Stanford Commencement, 2005"
+  },
+  {
+    "quote": "The web does not just connect machines, it connects people.",
+    "name": "Tim Berners-Lee",
+    "dates": "b. 1955",
+    "role": "Inventor of the World Wide Web",
+    "category": "tech",
+    "photoSlug": "berners-lee",
+    "wikiTitle": "Tim_Berners-Lee",
+    "source": ""
+  },
+  {
+    "quote": "Focused, hard work is the real key to success. Keep your eyes on the goal, and just keep taking the next step.",
+    "name": "John Carmack",
+    "dates": "b. 1970",
+    "role": "Programmer & Engineer",
+    "category": "tech",
+    "photoSlug": "carmack",
+    "wikiTitle": "John_Carmack",
+    "source": ""
+  },
+  {
+    "quote": "There was no choice but to be pioneers.",
+    "name": "Margaret Hamilton",
+    "dates": "b. 1936",
+    "role": "Lead Software Engineer, Apollo Program",
+    "category": "tech",
+    "photoSlug": "hamilton",
+    "wikiTitle": "Margaret_Hamilton_(software_engineer)",
+    "source": ""
+  },
+  {
+    "quote": "The present is theirs; the future, for which I really worked, is mine.",
+    "name": "Nikola Tesla",
+    "dates": "1856–1943",
+    "role": "Inventor & Electrical Engineer",
+    "category": "tech",
+    "photoSlug": "tesla",
+    "wikiTitle": "Nikola_Tesla",
+    "source": ""
+  },
+  {
+    "quote": "Premature optimization is the root of all evil.",
+    "name": "Donald Knuth",
+    "dates": "b. 1938",
+    "role": "Computer Scientist",
+    "category": "tech",
+    "photoSlug": "knuth",
+    "wikiTitle": "Donald_Knuth",
+    "source": "Structured Programming with go to Statements, 1974"
+  },
+  {
+    "quote": "Simplicity is prerequisite for reliability.",
+    "name": "Edsger Dijkstra",
+    "dates": "1930–2002",
+    "role": "Computer Scientist",
+    "category": "tech",
+    "photoSlug": "dijkstra",
+    "wikiTitle": "Edsger_W._Dijkstra",
+    "source": "EWD498, 1975"
+  },
+  {
+    "quote": "The Internet is for everyone.",
+    "name": "Vint Cerf",
+    "dates": "b. 1943",
+    "role": "Co-designer of TCP/IP",
+    "category": "tech",
+    "photoSlug": "cerf",
+    "wikiTitle": "Vint_Cerf",
+    "source": "RFC 3271, 2002"
+  },
+  {
+    "quote": "Talk is cheap. Show me the code.",
+    "name": "Linus Torvalds",
+    "dates": "b. 1969",
+    "role": "Creator of Linux",
+    "category": "tech",
+    "photoSlug": "torvalds",
+    "wikiTitle": "Linus_Torvalds",
+    "source": "Linux mailing list, 2000"
+  },
+  {
+    "quote": "I just wondered how things were put together.",
+    "name": "Claude Shannon",
+    "dates": "1916–2001",
+    "role": "Father of Information Theory",
+    "category": "tech",
+    "photoSlug": "shannon",
+    "wikiTitle": "Claude_Shannon",
+    "source": ""
+  },
+
+  {
+    "quote": "Imagination is more important than knowledge. Knowledge is limited. Imagination encircles the world.",
+    "name": "Albert Einstein",
+    "dates": "1879–1955",
+    "role": "Theoretical Physicist",
+    "category": "science",
+    "photoSlug": "einstein",
+    "wikiTitle": "Albert_Einstein",
+    "source": "Saturday Evening Post, 1929"
+  },
+  {
+    "quote": "The first principle is that you must not fool yourself — and you are the easiest person to fool.",
+    "name": "Richard Feynman",
+    "dates": "1918–1988",
+    "role": "Theoretical Physicist",
+    "category": "science",
+    "photoSlug": "feynman",
+    "wikiTitle": "Richard_Feynman",
+    "source": "Caltech Commencement, 1974"
+  },
+  {
+    "quote": "Nothing in life is to be feared, it is only to be understood. Now is the time to understand more, so that we may fear less.",
+    "name": "Marie Curie",
+    "dates": "1867–1934",
+    "role": "Physicist & Chemist",
+    "category": "science",
+    "photoSlug": "curie",
+    "wikiTitle": "Marie_Curie",
+    "source": ""
+  },
+  {
+    "quote": "Somewhere, something incredible is waiting to be known.",
+    "name": "Carl Sagan",
+    "dates": "1934–1996",
+    "role": "Astronomer & Author",
+    "category": "science",
+    "photoSlug": "sagan",
+    "wikiTitle": "Carl_Sagan",
+    "source": ""
+  },
+  {
+    "quote": "Look up at the stars and not down at your feet. Try to make sense of what you see, and wonder about what makes the universe exist. Be curious.",
+    "name": "Stephen Hawking",
+    "dates": "1942–2018",
+    "role": "Theoretical Physicist",
+    "category": "science",
+    "photoSlug": "hawking",
+    "wikiTitle": "Stephen_Hawking",
+    "source": ""
+  },
+  {
+    "quote": "What you do makes a difference, and you have to decide what kind of difference you want to make.",
+    "name": "Jane Goodall",
+    "dates": "1934–2025",
+    "role": "Primatologist",
+    "category": "science",
+    "photoSlug": "goodall",
+    "wikiTitle": "Jane_Goodall",
+    "source": ""
+  },
+  {
+    "quote": "If I had my life to live over again, I would have made a rule to read some poetry and listen to some music at least once every week.",
+    "name": "Charles Darwin",
+    "dates": "1809–1882",
+    "role": "Naturalist",
+    "category": "science",
+    "photoSlug": "darwin",
+    "wikiTitle": "Charles_Darwin",
+    "source": "Autobiography, 1876"
+  },
+  {
+    "quote": "I do not feel obliged to believe that the same God who has endowed us with sense, reason, and intellect has intended us to forgo their use.",
+    "name": "Galileo Galilei",
+    "dates": "1564–1642",
+    "role": "Astronomer & Physicist",
+    "category": "science",
+    "photoSlug": "galileo",
+    "wikiTitle": "Galileo_Galilei",
+    "source": "Letter to the Grand Duchess Christina, 1615"
+  },
+  {
+    "quote": "If I have seen further it is by standing on the shoulders of giants.",
+    "name": "Isaac Newton",
+    "dates": "1643–1727",
+    "role": "Mathematician & Physicist",
+    "category": "science",
+    "photoSlug": "newton",
+    "wikiTitle": "Isaac_Newton",
+    "source": "Letter to Robert Hooke, 1675"
+  },
+  {
+    "quote": "An expert is a person who has made all the mistakes that can be made in a very narrow field.",
+    "name": "Niels Bohr",
+    "dates": "1885–1962",
+    "role": "Physicist",
+    "category": "science",
+    "photoSlug": "bohr",
+    "wikiTitle": "Niels_Bohr",
+    "source": ""
+  },
+  {
+    "quote": "The good thing about science is that it's true whether or not you believe in it.",
+    "name": "Neil deGrasse Tyson",
+    "dates": "b. 1958",
+    "role": "Astrophysicist",
+    "category": "science",
+    "photoSlug": "tyson",
+    "wikiTitle": "Neil_deGrasse_Tyson",
+    "source": ""
+  },
+  {
+    "quote": "Science and everyday life cannot and should not be separated.",
+    "name": "Rosalind Franklin",
+    "dates": "1920–1958",
+    "role": "Chemist & X-ray Crystallographer",
+    "category": "science",
+    "photoSlug": "franklin",
+    "wikiTitle": "Rosalind_Franklin",
+    "source": "Letter, 1940"
+  },
+  {
+    "quote": "In nature nothing exists alone.",
+    "name": "Rachel Carson",
+    "dates": "1907–1964",
+    "role": "Marine Biologist & Author",
+    "category": "science",
+    "photoSlug": "carson",
+    "wikiTitle": "Rachel_Carson",
+    "source": "Silent Spring, 1962"
+  },
+
+  {
+    "quote": "You have power over your mind — not outside events. Realize this, and you will find strength.",
+    "name": "Marcus Aurelius",
+    "dates": "121–180",
+    "role": "Roman Emperor & Stoic Philosopher",
+    "category": "philosophy",
+    "photoSlug": "aurelius",
+    "wikiTitle": "Marcus_Aurelius",
+    "source": "Meditations"
+  },
+  {
+    "quote": "First say to yourself what you would be; and then do what you have to do.",
+    "name": "Epictetus",
+    "dates": "c. 50–135",
+    "role": "Stoic Philosopher",
+    "category": "philosophy",
+    "photoSlug": "epictetus",
+    "wikiTitle": "Epictetus",
+    "source": "Discourses"
+  },
+  {
+    "quote": "We suffer more often in imagination than in reality.",
+    "name": "Seneca",
+    "dates": "c. 4 BC–65 AD",
+    "role": "Stoic Philosopher",
+    "category": "philosophy",
+    "photoSlug": "seneca",
+    "wikiTitle": "Seneca_the_Younger",
+    "source": "Letters from a Stoic, XIII"
+  },
+  {
+    "quote": "Nothing great was ever achieved without enthusiasm.",
+    "name": "Ralph Waldo Emerson",
+    "dates": "1803–1882",
+    "role": "Essayist & Philosopher",
+    "category": "philosophy",
+    "photoSlug": "emerson",
+    "wikiTitle": "Ralph_Waldo_Emerson",
+    "source": "Essays: Second Series, Circles, 1844"
+  },
+  {
+    "quote": "If one advances confidently in the direction of his dreams, and endeavors to live the life which he has imagined, he will meet with a success unexpected in common hours.",
+    "name": "Henry David Thoreau",
+    "dates": "1817–1862",
+    "role": "Essayist & Naturalist",
+    "category": "philosophy",
+    "photoSlug": "thoreau",
+    "wikiTitle": "Henry_David_Thoreau",
+    "source": "Walden, 1854"
+  },
+  {
+    "quote": "There is no greater agony than bearing an untold story inside you.",
+    "name": "Maya Angelou",
+    "dates": "1928–2014",
+    "role": "Poet & Memoirist",
+    "category": "philosophy",
+    "photoSlug": "angelou",
+    "wikiTitle": "Maya_Angelou",
+    "source": "I Know Why the Caged Bird Sings, 1969"
+  },
+  {
+    "quote": "The wound is the place where the Light enters you.",
+    "name": "Rumi",
+    "dates": "1207–1273",
+    "role": "Persian Poet & Sufi Mystic",
+    "category": "philosophy",
+    "photoSlug": "rumi",
+    "wikiTitle": "Rumi",
+    "source": "Trans. Coleman Barks"
+  },
+  {
+    "quote": "A journey of a thousand miles begins with a single step.",
+    "name": "Lao Tzu",
+    "dates": "6th century BC",
+    "role": "Founder of Taoism",
+    "category": "philosophy",
+    "photoSlug": "laotzu",
+    "wikiTitle": "Laozi",
+    "source": "Tao Te Ching, ch. 64"
+  },
+  {
+    "quote": "Real knowledge is to know the extent of one's ignorance.",
+    "name": "Confucius",
+    "dates": "551–479 BC",
+    "role": "Philosopher",
+    "category": "philosophy",
+    "photoSlug": "confucius",
+    "wikiTitle": "Confucius",
+    "source": "Analects"
+  },
+  {
+    "quote": "The only true wisdom is in knowing you know nothing.",
+    "name": "Socrates",
+    "dates": "470–399 BC",
+    "role": "Philosopher",
+    "category": "philosophy",
+    "photoSlug": "socrates",
+    "wikiTitle": "Socrates",
+    "source": "Plato, Apology"
+  },
+  {
+    "quote": "He who has a why to live for can bear almost any how.",
+    "name": "Friedrich Nietzsche",
+    "dates": "1844–1900",
+    "role": "Philosopher",
+    "category": "philosophy",
+    "photoSlug": "nietzsche",
+    "wikiTitle": "Friedrich_Nietzsche",
+    "source": "Twilight of the Idols, 1889"
+  },
+  {
+    "quote": "When we are no longer able to change a situation, we are challenged to change ourselves.",
+    "name": "Viktor Frankl",
+    "dates": "1905–1997",
+    "role": "Psychiatrist & Author",
+    "category": "philosophy",
+    "photoSlug": "frankl",
+    "wikiTitle": "Viktor_Frankl",
+    "source": "Man's Search for Meaning, 1946"
+  },
+  {
+    "quote": "Be patient toward all that is unsolved in your heart and try to love the questions themselves.",
+    "name": "Rainer Maria Rilke",
+    "dates": "1875–1926",
+    "role": "Poet",
+    "category": "philosophy",
+    "photoSlug": "rilke",
+    "wikiTitle": "Rainer_Maria_Rilke",
+    "source": "Letters to a Young Poet, 1903"
+  },
+  {
+    "quote": "If there's a book that you want to read, but it hasn't been written yet, then you must write it.",
+    "name": "Toni Morrison",
+    "dates": "1931–2019",
+    "role": "Novelist",
+    "category": "philosophy",
+    "photoSlug": "morrison",
+    "wikiTitle": "Toni_Morrison",
+    "source": "Speech, Ohio Arts Council, 1981"
+  }
+]
