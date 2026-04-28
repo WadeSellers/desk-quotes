@@ -81,12 +81,18 @@ function preload(items) {
 }
 
 function loadImage(src) {
-  if (imageCache.has(src)) return imageCache.get(src);
+  // Don't permanently cache failures — a transient blip shouldn't poison
+  // a slot for the rest of the session.
+  const cached = imageCache.get(src);
+  if (cached) return cached;
   const p = new Promise((resolve) => {
     const img = new Image();
     img.decoding = 'async';
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null); // never reject — keep slideshow running
+    img.onerror = () => {
+      imageCache.delete(src);
+      resolve(null);
+    };
     img.src = src;
   });
   imageCache.set(src, p);
@@ -101,12 +107,22 @@ function run(deck) {
   showNext();
   setInterval(showNext, CONFIG.slideDurationMs);
 
-  function showNext() {
+  async function showNext(retryDepth = 0) {
     const item = deck.next();
+    const photoSrc = item.photo || `assets/photos/${item.photoSlug}.jpg`;
+
+    // Wait for the photo to be ready (either from cache or network) before
+    // committing the slide. If it can't load, skip to the next item — but
+    // bail out after a few attempts so we don't infinite-loop on a fully
+    // offline device.
+    const img = await loadImage(photoSrc);
+    if (!img && retryDepth < 5) {
+      return showNext(retryDepth + 1);
+    }
+
     const slide = renderSlide(item);
     stage.appendChild(slide);
 
-    // Force reflow so opacity transition kicks in
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         slide.classList.add('is-active');
@@ -122,7 +138,6 @@ function run(deck) {
 
     currentSlide = slide;
 
-    // Preload upcoming slides' photos
     preload(deck.peek(CONFIG.preloadAhead));
   }
 }

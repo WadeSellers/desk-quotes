@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -50,17 +50,18 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Photos: cache-first, lazy fill
+  // Photos: cache-first, lazy fill. Pass network errors through so the
+  // browser can retry on subsequent loads instead of caching a stub.
   if (url.pathname.includes('/assets/photos/')) {
-    event.respondWith(cacheFirst(request, PHOTO_CACHE));
+    event.respondWith(cacheFirst(request, PHOTO_CACHE, /*passThrough*/ true));
     return;
   }
 
   // Everything else (shell): cache-first with network fallback
-  event.respondWith(cacheFirst(request, SHELL_CACHE));
+  event.respondWith(cacheFirst(request, SHELL_CACHE, /*passThrough*/ false));
 });
 
-async function cacheFirst(request, cacheName) {
+async function cacheFirst(request, cacheName, passThrough) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
@@ -72,7 +73,10 @@ async function cacheFirst(request, cacheName) {
     }
     return response;
   } catch (err) {
-    // Offline and not cached — return a basic 504 so the slideshow can skip
+    if (passThrough) {
+      // Re-throw so respondWith rejects and the browser handles it normally.
+      throw err;
+    }
     return new Response('', { status: 504, statusText: 'Offline' });
   }
 }
