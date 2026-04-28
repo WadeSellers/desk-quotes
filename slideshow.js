@@ -161,6 +161,8 @@ function renderSlide(item) {
   img.alt = '';
   img.loading = 'eager';
   img.decoding = 'async';
+  // Per-image crop override (optional in quotes.json), e.g. "objectPosition": "center 30%"
+  if (item.objectPosition) img.style.objectPosition = item.objectPosition;
   photoWrap.appendChild(img);
 
   const text = document.createElement('div');

@@ -54,6 +54,9 @@ Edit `quotes.json`. Each entry needs:
 }
 ```
 
+Optional fields:
+- `objectPosition` — CSS `object-position` value to override the default photo crop for one entry. Example: `"objectPosition": "center 30%"` to push the focal point lower if a particular photo's framing needs it. Defaults to `center top`.
+
 After editing, fetch any new photos:
 
 ```bash
