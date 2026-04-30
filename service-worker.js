@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -66,16 +66,24 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
 });
 
+// Always returns a Response — never null/undefined — so respondWith can't
+// crash the page if both cache and network are unavailable.
+const networkErrorResponse = () =>
+  new Response('', { status: 504, statusText: 'Network error' });
+
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
-  // No cache — go to network and let errors propagate naturally.
-  const response = await fetch(request);
-  if (response && response.status === 200) {
-    cache.put(request, response.clone());
+  try {
+    const response = await fetch(request);
+    if (response && response.status === 200) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return networkErrorResponse();
   }
-  return response;
 }
 
 async function staleWhileRevalidate(request, cacheName) {
@@ -87,7 +95,7 @@ async function staleWhileRevalidate(request, cacheName) {
       cache.put(request, response.clone());
     }
     return response;
-  }).catch(() => null);
+  }).catch(() => networkErrorResponse());
 
   // Cached if we have it (fast path), else wait for the network.
   return cached || fetchPromise;
