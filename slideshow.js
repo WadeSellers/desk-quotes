@@ -176,6 +176,11 @@ const CHIME_SEQUENCES = {
     { freq: NOTES.E5, time: 0.00, duration: 0.55 },
     { freq: NOTES.A5, time: 0.28, duration: 1.30 },
   ],
+  // Cancel: quick descending two-tone — brief "never mind, going back"
+  cancel: [
+    { freq: NOTES.G5, time: 0.00, duration: 0.18 },
+    { freq: NOTES.C5, time: 0.10, duration: 0.50 },
+  ],
 };
 
 let _audioCtx;
@@ -462,6 +467,7 @@ const ui = (() => {
         _countdownRunning = false;
       }
     } else {
+      chime('cancel');
       pomodoro.cancel();
     }
   });
