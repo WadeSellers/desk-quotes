@@ -16,7 +16,7 @@ const DEFAULTS = {
   breakMinutes: 5,
   longBreakMinutes: 15,
   cyclesBeforeLongBreak: 4,
-  soundEnabled: false,
+  soundEnabled: true,
   pauseDuringWork: false, // slideshow keeps cycling during work by default
   themeMode: 'day',       // day | evening | night (manual choice)
 };
@@ -88,7 +88,7 @@ const pomodoro = (() => {
   // Tick every second to detect phase end
   setInterval(() => {
     if (state.phase !== POM.IDLE && state.endTime && Date.now() >= state.endTime) {
-      chime(state.phase === POM.WORK ? 660 : 440);
+      chime(state.phase === POM.WORK ? CHIME_FREQ.work : CHIME_FREQ.break);
       advance();
     } else if (state.phase !== POM.IDLE) {
       // Periodic emit so UI can update progress bar
@@ -136,12 +136,14 @@ applyTheme();
 
 // ----- Audio (gentle sine chime, no asset) ---------------------------------
 
+const CHIME_FREQ = { work: 660, break: 440 };
+
 let _audioCtx;
-function chime(freqHz) {
-  if (!settings.get('soundEnabled')) return;
+function playChime(freqHz) {
   try {
     _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const ctx = _audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -154,6 +156,13 @@ function chime(freqHz) {
     osc.start();
     osc.stop(ctx.currentTime + 1.6);
   } catch {}
+}
+
+// chime() respects the user's sound preference; playChime() always plays
+// (used by the Preview buttons in settings).
+function chime(freqHz) {
+  if (!settings.get('soundEnabled')) return;
+  playChime(freqHz);
 }
 
 // ----- Mood-aware deck -----------------------------------------------------
@@ -424,7 +433,14 @@ const settingsPanel = (() => {
           <div class="settings__row">
             <span class="settings__label">Sound on transitions</span>
             <span class="settings__value" data-key="soundEnabled"
-              data-options="false:Off|true:On"></span>
+              data-options="true:On|false:Off"></span>
+          </div>
+          <div class="settings__row">
+            <span class="settings__label">Preview</span>
+            <span class="settings__value">
+              <button class="settings__chip" type="button" data-preview="work">Work end</button>
+              <button class="settings__chip" type="button" data-preview="break">Break end</button>
+            </span>
           </div>
         </div>
 
@@ -446,8 +462,9 @@ const settingsPanel = (() => {
         <button class="settings__refresh" type="button">Reload app</button>
       </div>`;
 
-    // Wire chips
-    root.querySelectorAll('.settings__value').forEach((wrap) => {
+    // Wire chips. Filter to rows that actually declare data-options;
+    // action-only rows (e.g. the Preview row) wire themselves below.
+    root.querySelectorAll('.settings__value[data-options]').forEach((wrap) => {
       const key = wrap.dataset.key;
       const opts = wrap.dataset.options.split('|').map((s) => {
         const [v, label] = s.split(':');
@@ -475,7 +492,7 @@ const settingsPanel = (() => {
     });
 
     function syncChips() {
-      root.querySelectorAll('.settings__value').forEach((wrap) => {
+      root.querySelectorAll('.settings__value[data-options]').forEach((wrap) => {
         const key = wrap.dataset.key;
         const current = String(settings.get(key));
         wrap.querySelectorAll('.settings__chip').forEach((b) => {
@@ -484,6 +501,14 @@ const settingsPanel = (() => {
       });
     }
     root._sync = syncChips;
+
+    // Wire up Preview chime buttons — these play unconditionally so a
+    // user can hear the chimes even if Sound is currently set to Off.
+    root.querySelectorAll('[data-preview]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        playChime(CHIME_FREQ[btn.dataset.preview] || 440);
+      });
+    });
 
     // Reload — flush only the shell cache (HTML/CSS/JS/JSON, ~70KB)
     // so a freshly-deployed version is fetched immediately. The photo
