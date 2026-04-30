@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v8';
+const VERSION = 'v9';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -71,12 +71,24 @@ self.addEventListener('fetch', (event) => {
 const networkErrorResponse = () =>
   new Response('', { status: 504, statusText: 'Network error' });
 
+// Fetch with a hard timeout so a stalled request doesn't make the whole
+// page hang for 30+ seconds before the browser gives up.
+function fetchWithTimeout(request, ms = 8000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('fetch timeout')), ms);
+    fetch(request).then(
+      (response) => { clearTimeout(timer); resolve(response); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
   try {
-    const response = await fetch(request);
+    const response = await fetchWithTimeout(request);
     if (response && response.status === 200) {
       cache.put(request, response.clone());
     }
@@ -90,7 +102,7 @@ async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
-  const fetchPromise = fetch(request).then((response) => {
+  const fetchPromise = fetchWithTimeout(request).then((response) => {
     if (response && response.status === 200) {
       cache.put(request, response.clone());
     }

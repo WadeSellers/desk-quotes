@@ -485,11 +485,16 @@ const settingsPanel = (() => {
     }
     root._sync = syncChips;
 
-    // Reload — flush all SW caches then reload, so a freshly-deployed
-    // version is fetched immediately rather than on the second reload.
+    // Reload — flush only the shell cache (HTML/CSS/JS/JSON, ~70KB)
+    // so a freshly-deployed version is fetched immediately. The photo
+    // cache is left intact so we don't have to redownload ~24MB worth
+    // of portraits over potentially flaky wifi.
     root.querySelector('.settings__refresh').addEventListener('click', async () => {
       try {
-        for (const k of await caches.keys()) await caches.delete(k);
+        const keys = await caches.keys();
+        for (const k of keys) {
+          if (k.startsWith('desk-quotes-shell-')) await caches.delete(k);
+        }
       } catch {}
       window.location.reload();
     });
