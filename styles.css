@@ -419,6 +419,63 @@ html, body { transition: background-color 1800ms ease, color 1800ms ease; }
 .photo__img { transition: filter 1800ms ease, transform var(--kenburns) linear; }
 
 /* ------------------------------------------------------------
+   Pomodoro countdown — full-screen 3-2-1-Go overlay
+   ------------------------------------------------------------ */
+
+.countdown {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  pointer-events: auto;
+  background: rgba(var(--bg-rgb), 0);
+  opacity: 0;
+  transition: opacity 320ms ease, background 320ms ease;
+}
+
+.countdown.is-visible {
+  opacity: 1;
+  background: rgba(var(--bg-rgb), 0.94);
+}
+
+.countdown__numeral {
+  position: absolute;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(180px, 56vh, 460px);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+  font-feature-settings: "lnum" 1;
+  font-variant-numeric: lining-nums;
+  animation: countdownNumeral 800ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.countdown__numeral--final {
+  font-size: clamp(120px, 38vh, 340px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-style: normal;
+  animation: countdownGo 1400ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes countdownNumeral {
+  0%   { transform: scale(0.55); opacity: 0; }
+  22%  { transform: scale(1);    opacity: 1; }
+  72%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1.22); opacity: 0; }
+}
+
+@keyframes countdownGo {
+  0%   { transform: scale(0.55); opacity: 0; }
+  14%  { transform: scale(1);    opacity: 1; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* ------------------------------------------------------------
    Settings panel — slide-up modal, editorial styling
    ------------------------------------------------------------ */
 

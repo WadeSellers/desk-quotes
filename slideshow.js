@@ -152,6 +152,18 @@ const NOTES = {
 
 // Each entry: { freq, time (s offset from start), duration (s) }
 const CHIME_SEQUENCES = {
+  // Pomodoro start: three rising ticks for 3-2-1, then a four-note
+  // arpeggio on Go. Synced to the visual countdown timing (800ms steps).
+  start: [
+    { freq: NOTES.E5, time: 0.00, duration: 0.35 }, // 3
+    { freq: NOTES.G5, time: 0.80, duration: 0.35 }, // 2
+    { freq: NOTES.A5, time: 1.60, duration: 0.35 }, // 1
+    // GO! ascending C major arpeggio
+    { freq: NOTES.C5, time: 2.40, duration: 0.50 },
+    { freq: NOTES.E5, time: 2.55, duration: 0.55 },
+    { freq: NOTES.G5, time: 2.70, duration: 0.65 },
+    { freq: NOTES.C6, time: 2.85, duration: 1.40 },
+  ],
   // Work-end: bright ascending major arpeggio — "you did it!"
   work: [
     { freq: NOTES.C5, time: 0.00, duration: 0.50 },
@@ -438,13 +450,63 @@ const ui = (() => {
     });
   }
 
-  ctrlPom.addEventListener('click', () => pomodoro.toggle());
+  let _countdownRunning = false;
+  ctrlPom.addEventListener('click', async () => {
+    if (_countdownRunning) return;
+    if (pomodoro.phase === POM.IDLE) {
+      _countdownRunning = true;
+      try {
+        await runCountdown();
+        pomodoro.start();
+      } finally {
+        _countdownRunning = false;
+      }
+    } else {
+      pomodoro.cancel();
+    }
+  });
   ctrlSet.addEventListener('click', () => settingsPanel.open());
 
   pomodoro.on(update);
   update();
   return { update };
 })();
+
+// ----- Countdown overlay (3-2-1-Go before a pomodoro starts) ---------------
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function runCountdown() {
+  const overlay = document.createElement('div');
+  overlay.className = 'countdown';
+  document.body.appendChild(overlay);
+
+  // Force initial paint, then trigger fade-in
+  // eslint-disable-next-line no-unused-expressions
+  overlay.offsetHeight;
+  overlay.classList.add('is-visible');
+
+  // Fire the start chime immediately (audio runs in parallel with visuals)
+  chime('start');
+
+  async function showNumeral(text, opts = {}) {
+    const el = document.createElement('span');
+    el.className = 'countdown__numeral' + (opts.final ? ' countdown__numeral--final' : '');
+    el.textContent = text;
+    overlay.appendChild(el);
+    await wait(opts.holdMs);
+    el.remove();
+  }
+
+  await showNumeral('3',  { holdMs: 800 });
+  await showNumeral('2',  { holdMs: 800 });
+  await showNumeral('1',  { holdMs: 800 });
+  await showNumeral('Go', { holdMs: 1100, final: true });
+
+  overlay.classList.remove('is-visible');
+  await wait(320);
+  overlay.remove();
+}
 
 // ----- Settings panel (built lazily on first open) -------------------------
 
