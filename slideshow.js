@@ -18,6 +18,7 @@ const DEFAULTS = {
   cyclesBeforeLongBreak: 4,
   soundEnabled: false,
   pauseDuringWork: false, // slideshow keeps cycling during work by default
+  themeMode: 'auto',      // auto | day | evening | night
 };
 
 const settings = (() => {
@@ -117,6 +118,29 @@ const pomodoro = (() => {
     on: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
   };
 })();
+
+// ----- Theme (time-of-day palette) -----------------------------------------
+
+const THEME_MODES = ['day', 'evening', 'night'];
+
+function timeOfDayMode(now = new Date()) {
+  const h = now.getHours();
+  if (h >= 22 || h < 7) return 'night';
+  if (h >= 18) return 'evening';
+  return 'day';
+}
+
+function applyTheme() {
+  const setting = settings.get('themeMode');
+  const mode = setting === 'auto' ? timeOfDayMode() : setting;
+  const body = document.body;
+  for (const m of THEME_MODES) body.classList.toggle(`is-${m}`, m === mode);
+}
+
+applyTheme();
+// Re-evaluate every minute so a session that crosses 6pm or 10pm shifts
+// without needing a reload.
+setInterval(applyTheme, 60_000);
 
 // ----- Audio (gentle sine chime, no asset) ---------------------------------
 
@@ -412,6 +436,15 @@ const settingsPanel = (() => {
           </div>
         </div>
 
+        <div class="settings__section">
+          <div class="settings__section-title">Display</div>
+          <div class="settings__row">
+            <span class="settings__label">Theme</span>
+            <span class="settings__value" data-key="themeMode"
+              data-options="auto:Auto|day:Light|evening:Warm|night:Dark"></span>
+          </div>
+        </div>
+
         <p class="settings__hint">
           Tap the dot in the upper-right corner to start a pomodoro.
           The slideshow keeps cycling but shifts to a working mood; on the
@@ -435,10 +468,15 @@ const settingsPanel = (() => {
         btn.textContent = label;
         btn.dataset.value = v;
         btn.addEventListener('click', () => {
-          const parsed = v === 'true' ? true : v === 'false' ? false : Number(v);
+          let parsed;
+          if (v === 'true') parsed = true;
+          else if (v === 'false') parsed = false;
+          else if (/^\d+$/.test(v)) parsed = Number(v);
+          else parsed = v; // string keys (e.g. theme: 'auto', 'day', ...)
           settings.set(key, parsed);
           syncChips();
           ui.update();
+          if (key === 'themeMode') applyTheme();
         });
         wrap.appendChild(btn);
       }

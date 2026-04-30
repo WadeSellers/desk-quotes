@@ -24,15 +24,53 @@
   font-display: block;
 }
 
+/* ----- Theme palettes -------------------------------------------------
+   Each body theme class swaps a small set of RGB triplets. Everything
+   else (photo gradient, text bg, hairlines) is derived from those, so
+   the whole interface fades in unison when the theme changes.
+   --------------------------------------------------------------------- */
+
+/* The three palette triplets cascade on body via theme classes; every
+   color elsewhere derives from these via inline rgb()/rgba() so the
+   substitution always uses the closest cascaded value. Putting --bg,
+   --ink, --muted as derived shortcuts didn't work — once computed they
+   wouldn't recompute when the triplets swapped on body. */
+
 :root {
-  --bg:     #FAF7F0;   /* warm cream */
-  --ink:    #1A1A1A;   /* rich black */
-  --muted:  #8B7355;   /* warm ochre */
-  --hair:   rgba(26, 26, 26, 0.12);
+  --bg-rgb:    250, 247, 240;   /* day cream — base */
+  --ink-rgb:   26, 26, 26;
+  --muted-rgb: 139, 115, 85;
 
   --crossfade: 1500ms;
   --kenburns:  35s;
 }
+
+/* Shorthand color helpers. Note: these are deliberately defined per-element
+   inside body so they recompute when --bg-rgb / --ink-rgb / --muted-rgb
+   change on body. */
+:root, body, body * {
+  --bg:    rgb(var(--bg-rgb));
+  --ink:   rgb(var(--ink-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --hair:  rgba(var(--ink-rgb), 0.12);
+}
+
+body.is-evening {
+  --bg-rgb:    242, 231, 211;   /* warmer sand */
+  --ink-rgb:   42, 31, 26;
+  --muted-rgb: 139, 110, 71;
+}
+
+body.is-night {
+  --bg-rgb:    14, 13, 11;      /* deep ink with a sliver of warmth */
+  --ink-rgb:   232, 221, 201;   /* bone */
+  --muted-rgb: 168, 138, 99;    /* warm ochre stays warm on dark */
+}
+
+/* Break overrides per theme */
+body.is-day.is-break    { --bg-rgb: 244, 236, 219; }
+body.is-evening.is-break { --bg-rgb: 235, 220, 195; }
+body.is-night.is-break   { --bg-rgb: 28, 22, 14; }
 
 * {
   box-sizing: border-box;
@@ -118,7 +156,8 @@ body {
   transform: scale(1.06);
 }
 
-/* Bottom fade into cream */
+/* Bottom fade into the page background — uses the theme bg variable so
+   it stays in sync as themes change. */
 .photo::after {
   content: '';
   position: absolute;
@@ -127,9 +166,9 @@ body {
   bottom: -1px;
   height: 14vh;
   background: linear-gradient(to bottom,
-    rgba(250, 247, 240, 0) 0%,
-    rgba(250, 247, 240, 0.4) 60%,
-    rgba(250, 247, 240, 1) 100%);
+    rgba(var(--bg-rgb), 0) 0%,
+    rgba(var(--bg-rgb), 0.4) 60%,
+    rgba(var(--bg-rgb), 1) 100%);
   pointer-events: none;
 }
 
@@ -360,23 +399,23 @@ body.is-break .cycles__dot.is-filled { background: #8C5E2E; }
    Break-mode palette shift (cream -> warm amber)
    ------------------------------------------------------------ */
 
-body.is-break {
-  background: #F4ECDB;
-}
-body.is-break .text { background: #F4ECDB; }
-body.is-break .photo::after {
-  background: linear-gradient(to bottom,
-    rgba(244, 236, 219, 0) 0%,
-    rgba(244, 236, 219, 0.4) 60%,
-    rgba(244, 236, 219, 1) 100%);
-}
+/* Break-mode photo treatment — slight sepia warmth, slightly darkened */
 body.is-break .photo__img {
   filter: grayscale(1) contrast(1.02) brightness(0.94) sepia(0.18);
 }
 
-body { transition: background 1800ms ease; }
-.text { transition: background 1800ms ease; }
-.photo::after { transition: background 1800ms ease; }
+/* Night-mode photo: lower brightness so face doesn't blow out the dark frame */
+body.is-night .photo__img {
+  filter: grayscale(1) contrast(0.95) brightness(0.78);
+}
+body.is-night.is-break .photo__img {
+  filter: grayscale(1) contrast(0.93) brightness(0.72) sepia(0.22);
+}
+
+/* Smooth theme transitions — bg/color animate when --bg-rgb / --ink-rgb
+   change, since the rendered background-color and color values change. */
+html, body { transition: background-color 1800ms ease, color 1800ms ease; }
+.text { transition: background-color 1800ms ease; }
 .photo__img { transition: filter 1800ms ease, transform var(--kenburns) linear; }
 
 /* ------------------------------------------------------------
@@ -387,7 +426,7 @@ body { transition: background 1800ms ease; }
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: rgba(26, 26, 26, 0.32);
+  background: rgba(0, 0, 0, 0.42);
   opacity: 0;
   pointer-events: none;
   transition: opacity 320ms ease;
