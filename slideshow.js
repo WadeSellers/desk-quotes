@@ -292,30 +292,43 @@ function escapeHtml(s) {
 const ui = (() => {
   const ctrlPom = document.getElementById('ctrl-pomodoro');
   const ctrlSet = document.getElementById('ctrl-settings');
-  const progress = document.getElementById('progress');
-  const fill = progress.querySelector('.progress__fill');
+  const phaseEl = document.getElementById('pom-phase');
+  const timeEl = document.getElementById('pom-time');
   const cyclesEl = document.getElementById('cycles');
+
+  function formatTime(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function phaseLabel(phase) {
+    if (phase === POM.WORK) return 'Work';
+    if (phase === POM.BREAK) return 'Break';
+    if (phase === POM.LONG) return 'Long break';
+    return 'Pomodoro';
+  }
 
   function update() {
     const phase = pomodoro.phase;
 
-    // Pomodoro dot color
+    // Pomodoro button class state
+    ctrlPom.classList.toggle('is-idle', phase === POM.IDLE);
     ctrlPom.classList.toggle('is-work', phase === POM.WORK);
     ctrlPom.classList.toggle('is-break', phase === POM.BREAK || phase === POM.LONG);
     ctrlPom.setAttribute('aria-label',
       phase === POM.IDLE ? 'Start pomodoro' : 'Cancel pomodoro');
 
-    // Progress bar
+    // Phase label + countdown
+    phaseEl.textContent = phaseLabel(phase);
     if (phase === POM.IDLE) {
-      progress.classList.remove('is-active', 'is-break');
-      fill.style.width = '0%';
+      timeEl.textContent = '';
+      ctrlPom.classList.remove('is-urgent');
     } else {
-      progress.classList.add('is-active');
-      progress.classList.toggle('is-break', phase !== POM.WORK);
-      const total = pomodoro.totalDurationMs;
-      const elapsed = total - Math.max(0, pomodoro.endTime - Date.now());
-      const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
-      fill.style.width = `${pct.toFixed(2)}%`;
+      const remaining = Math.max(0, pomodoro.endTime - Date.now());
+      timeEl.textContent = formatTime(remaining);
+      ctrlPom.classList.toggle('is-urgent', remaining > 0 && remaining <= 30_000);
     }
 
     // Body palette for break

@@ -27,11 +27,13 @@
 <body>
   <main id="stage" aria-live="polite"></main>
 
-  <div class="progress" id="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+  <button class="ctrl-settings" id="ctrl-settings" type="button" aria-label="Settings">Settings</button>
 
-  <button class="ctrl ctrl--settings" id="ctrl-settings" type="button" aria-label="Settings"></button>
-  <button class="ctrl ctrl--pomodoro" id="ctrl-pomodoro" type="button" aria-label="Start pomodoro"></button>
-  <div class="cycles" id="cycles" aria-hidden="true"></div>
+  <button class="ctrl-pomodoro" id="ctrl-pomodoro" type="button" aria-label="Start pomodoro">
+    <div class="cycles" id="cycles" aria-hidden="true"></div>
+    <div class="ctrl-pomodoro__phase" id="pom-phase">Pomodoro</div>
+    <div class="ctrl-pomodoro__time" id="pom-time"></div>
+  </button>
 
   <noscript>
     <p style="padding:2rem;font-family:Georgia,serif">JavaScript is required to run the slideshow.</p>

@@ -238,101 +238,123 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Persistent UI: corner controls, progress bar, cycle dots
+   Persistent UI: bottom-corner controls + pomodoro timer
    ------------------------------------------------------------ */
 
-.ctrl {
+.ctrl-settings,
+.ctrl-pomodoro {
   position: fixed;
-  top: 0;
-  width: 30px;
-  height: 30px;
-  padding: 12px;
+  bottom: max(28px, env(safe-area-inset-bottom));
   background: transparent;
   border: 0;
   cursor: pointer;
   z-index: 10;
+  font-family: inherit;
+  color: var(--ink);
   -webkit-tap-highlight-color: transparent;
 }
 
-.ctrl::before {
-  content: '';
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--muted);
-  opacity: 0.55;
-  transition: background 600ms ease, opacity 600ms ease, transform 200ms ease;
+/* ----- Settings button (bottom-left) ----- */
+
+.ctrl-settings {
+  left: max(28px, env(safe-area-inset-left));
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 14px 16px;
+  font-weight: 400;
+  transition: color 200ms ease;
 }
 
-.ctrl:active::before { transform: scale(0.85); }
+.ctrl-settings:hover { color: var(--ink); }
+.ctrl-settings:active { transform: translateY(1px); }
 
-.ctrl--settings { left: 0; }
-.ctrl--pomodoro { right: 0; }
+/* ----- Pomodoro button (bottom-right) ----- */
 
-.ctrl--pomodoro.is-work::before {
-  background: var(--ink);
-  opacity: 1;
-}
-.ctrl--pomodoro.is-break::before {
-  background: #B8895C;
-  opacity: 1;
-}
-
-/* Hairline progress bar at very top */
-.progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  z-index: 9;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 400ms ease;
-}
-
-.progress.is-active { opacity: 1; }
-
-.progress__fill {
-  height: 100%;
-  width: 0%;
-  background: var(--ink);
-  transition: width 1s linear, background 600ms ease;
-}
-
-.progress.is-break .progress__fill {
-  background: #B8895C;
-}
-
-/* Cycle dots — small ••• row under the pomodoro control */
-.cycles {
-  position: fixed;
-  top: 38px;
-  right: 18px;
+.ctrl-pomodoro {
+  right: max(28px, env(safe-area-inset-right));
   display: flex;
-  gap: 4px;
-  z-index: 10;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  padding: 14px 16px;
+  gap: 6px;
+  min-width: 120px;
+  transition: opacity 200ms ease;
+}
+
+.ctrl-pomodoro:active { transform: translateY(1px); }
+
+.ctrl-pomodoro__phase {
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 400;
+  transition: color 600ms ease;
+  line-height: 1;
+}
+
+.ctrl-pomodoro__time {
+  font-size: 44px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  transition: color 600ms ease, opacity 200ms ease;
+}
+
+.ctrl-pomodoro.is-idle .ctrl-pomodoro__time {
+  display: none;
+}
+
+.ctrl-pomodoro.is-work .ctrl-pomodoro__phase { color: var(--ink); }
+.ctrl-pomodoro.is-work .ctrl-pomodoro__time { color: var(--ink); }
+
+.ctrl-pomodoro.is-break .ctrl-pomodoro__phase { color: #8C5E2E; }
+.ctrl-pomodoro.is-break .ctrl-pomodoro__time { color: #8C5E2E; }
+
+/* Last-30s urgency: subtle pulse on the digits */
+.ctrl-pomodoro.is-urgent .ctrl-pomodoro__time {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* ----- Cycle dots (inside pomodoro button) ----- */
+
+.cycles {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 2px;
   opacity: 0;
   transition: opacity 600ms ease;
-  pointer-events: none;
 }
 
 .cycles.is-visible { opacity: 1; }
 
 .cycles__dot {
-  width: 4px;
-  height: 4px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--muted);
-  opacity: 0.3;
-  transition: opacity 400ms ease, background 400ms ease;
+  background: transparent;
+  border: 1px solid var(--muted);
+  opacity: 0.6;
+  transition: opacity 400ms ease, background 400ms ease, border-color 400ms ease;
 }
 
 .cycles__dot.is-filled {
-  opacity: 0.85;
+  opacity: 1;
   background: var(--ink);
+  border-color: var(--ink);
 }
+
+body.is-break .cycles__dot.is-filled { background: #8C5E2E; }
 
 /* ------------------------------------------------------------
    Break-mode palette shift (cream -> warm amber)
