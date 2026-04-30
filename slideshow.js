@@ -18,7 +18,7 @@ const DEFAULTS = {
   cyclesBeforeLongBreak: 4,
   soundEnabled: false,
   pauseDuringWork: false, // slideshow keeps cycling during work by default
-  themeMode: 'auto',      // auto | day | evening | night
+  themeMode: 'day',       // day | evening | night (manual choice)
 };
 
 const settings = (() => {
@@ -119,28 +119,20 @@ const pomodoro = (() => {
   };
 })();
 
-// ----- Theme (time-of-day palette) -----------------------------------------
+// ----- Theme palette (manual) ----------------------------------------------
 
 const THEME_MODES = ['day', 'evening', 'night'];
 
-function timeOfDayMode(now = new Date()) {
-  const h = now.getHours();
-  if (h >= 22 || h < 7) return 'night';
-  if (h >= 18) return 'evening';
-  return 'day';
-}
-
 function applyTheme() {
   const setting = settings.get('themeMode');
-  const mode = setting === 'auto' ? timeOfDayMode() : setting;
+  // Fall back to day for any unexpected value (covers older settings
+  // that had the now-removed 'auto' option).
+  const mode = THEME_MODES.includes(setting) ? setting : 'day';
   const body = document.body;
   for (const m of THEME_MODES) body.classList.toggle(`is-${m}`, m === mode);
 }
 
 applyTheme();
-// Re-evaluate every minute so a session that crosses 6pm or 10pm shifts
-// without needing a reload.
-setInterval(applyTheme, 60_000);
 
 // ----- Audio (gentle sine chime, no asset) ---------------------------------
 
@@ -441,7 +433,7 @@ const settingsPanel = (() => {
           <div class="settings__row">
             <span class="settings__label">Theme</span>
             <span class="settings__value" data-key="themeMode"
-              data-options="auto:Auto|day:Light|evening:Warm|night:Dark"></span>
+              data-options="day:Light|evening:Warm|night:Dark"></span>
           </div>
         </div>
 
