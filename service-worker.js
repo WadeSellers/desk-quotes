@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -26,10 +26,13 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(SHELL_CACHE);
+    // Bypass the HTTP cache so a freshly-deployed asset isn't masked by
+    // a still-warm browser cache entry from the previous version.
+    await cache.addAll(SHELL_ASSETS.map((url) => new Request(url, { cache: 'reload' })));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
