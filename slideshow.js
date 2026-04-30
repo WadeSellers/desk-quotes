@@ -88,7 +88,7 @@ const pomodoro = (() => {
   // Tick every second to detect phase end
   setInterval(() => {
     if (state.phase !== POM.IDLE && state.endTime && Date.now() >= state.endTime) {
-      chime(state.phase === POM.WORK ? CHIME_FREQ.work : CHIME_FREQ.break);
+      chime(state.phase === POM.WORK ? 'work' : 'break');
       advance();
     } else if (state.phase !== POM.IDLE) {
       // Periodic emit so UI can update progress bar
@@ -134,35 +134,95 @@ function applyTheme() {
 
 applyTheme();
 
-// ----- Audio (gentle sine chime, no asset) ---------------------------------
+// ----- Audio (synthesized chime sequences, no asset) -----------------------
+//
+// Each chime is a short melodic phrase rather than a single tone — friendlier
+// and easier to recognize at a distance. Notes are sine + a quieter octave
+// harmonic with a fast attack and exponential decay, giving a bell/marimba
+// character. All synthesized at runtime, no audio files required.
 
-const CHIME_FREQ = { work: 660, break: 440 };
+// C major triad spread + the octave above, in Hz.
+const NOTES = {
+  C5: 523.25,
+  E5: 659.25,
+  G5: 783.99,
+  A5: 880.00,
+  C6: 1046.50,
+};
+
+// Each entry: { freq, time (s offset from start), duration (s) }
+const CHIME_SEQUENCES = {
+  // Work-end: bright ascending major arpeggio — "you did it!"
+  work: [
+    { freq: NOTES.C5, time: 0.00, duration: 0.50 },
+    { freq: NOTES.E5, time: 0.13, duration: 0.55 },
+    { freq: NOTES.G5, time: 0.26, duration: 0.65 },
+    { freq: NOTES.C6, time: 0.39, duration: 1.40 },
+  ],
+  // Break-end: gentle two-tone "doorbell" — calling you back
+  break: [
+    { freq: NOTES.E5, time: 0.00, duration: 0.55 },
+    { freq: NOTES.A5, time: 0.28, duration: 1.30 },
+  ],
+};
 
 let _audioCtx;
-function playChime(freqHz) {
+
+function _ensureCtx() {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function _playNote(ctx, freq, startTime, duration, peakGain) {
+  // Fundamental sine
+  const osc1 = ctx.createOscillator();
+  const g1 = ctx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.value = freq;
+  osc1.connect(g1);
+  g1.connect(ctx.destination);
+  g1.gain.setValueAtTime(0, startTime);
+  g1.gain.linearRampToValueAtTime(peakGain, startTime + 0.008);
+  g1.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc1.start(startTime);
+  osc1.stop(startTime + duration + 0.05);
+
+  // Octave harmonic — quieter, decays faster — gives the note a bell-like
+  // shimmer instead of a flat sine tone.
+  const osc2 = ctx.createOscillator();
+  const g2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2;
+  osc2.connect(g2);
+  g2.connect(ctx.destination);
+  g2.gain.setValueAtTime(0, startTime);
+  g2.gain.linearRampToValueAtTime(peakGain * 0.32, startTime + 0.005);
+  g2.gain.exponentialRampToValueAtTime(0.0001, startTime + duration * 0.55);
+  osc2.start(startTime);
+  osc2.stop(startTime + duration + 0.05);
+}
+
+function playChime(which) {
+  const sequence = CHIME_SEQUENCES[which];
+  if (!sequence) return;
   try {
-    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = _audioCtx;
-    if (ctx.state === 'suspended') ctx.resume();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freqHz;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.6);
-    osc.start();
-    osc.stop(ctx.currentTime + 1.6);
+    const ctx = _ensureCtx();
+    const start = ctx.currentTime + 0.02;
+    const peakGain = 0.28;
+    for (const n of sequence) {
+      _playNote(ctx, n.freq, start + n.time, n.duration, peakGain);
+    }
   } catch {}
 }
 
 // chime() respects the user's sound preference; playChime() always plays
 // (used by the Preview buttons in settings).
-function chime(freqHz) {
+function chime(which) {
   if (!settings.get('soundEnabled')) return;
-  playChime(freqHz);
+  playChime(which);
 }
 
 // ----- Mood-aware deck -----------------------------------------------------
@@ -506,7 +566,7 @@ const settingsPanel = (() => {
     // user can hear the chimes even if Sound is currently set to Off.
     root.querySelectorAll('[data-preview]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        playChime(CHIME_FREQ[btn.dataset.preview] || 440);
+        playChime(btn.dataset.preview);
       });
     });
 
