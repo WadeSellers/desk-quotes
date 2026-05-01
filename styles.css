@@ -365,6 +365,32 @@ body {
   50% { opacity: 0.55; }
 }
 
+/* ----- Clock (top-right, day + time) ----- */
+
+.clock {
+  position: fixed;
+  top: max(22px, env(safe-area-inset-top, 22px));
+  right: max(28px, env(safe-area-inset-right, 28px));
+  font-size: 13px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 400;
+  font-family: 'EB Garamond', Georgia, serif;
+  z-index: 10;
+  pointer-events: none;
+  /* Halo keeps text legible over both bright and dark photo areas */
+  text-shadow:
+    0 0 12px rgba(var(--bg-rgb), 0.90),
+    0 1px  4px rgba(var(--bg-rgb), 0.80);
+  opacity: 1;
+  transition: opacity 600ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.clock.is-hidden { opacity: 0; }
+
 /* ----- Cycle dots (inside pomodoro button) ----- */
 
 .cycles {

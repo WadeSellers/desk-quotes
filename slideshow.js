@@ -20,6 +20,7 @@ const DEFAULTS = {
   soundEnabled: true,
   pauseDuringWork: false, // slideshow keeps cycling during work by default
   themeMode: 'day',       // day | evening | night (manual choice)
+  showClock: true,        // top-right day + time display
 };
 
 const settings = (() => {
@@ -134,6 +135,39 @@ function applyTheme() {
 }
 
 applyTheme();
+
+// ----- Clock (top-right, day + time) --------------------------------------
+//
+// Updates on the minute boundary so the display is never more than a few
+// milliseconds off. Passes through taps (pointer-events:none on the element).
+
+const clock = (() => {
+  const el = document.getElementById('clock');
+
+  function render() {
+    const visible = settings.get('showClock');
+    el.classList.toggle('is-hidden', !visible);
+    if (!visible) return;
+    const now  = new Date();
+    const day  = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const time = now.toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+    el.textContent = `${day} · ${time}`;
+  }
+
+  // Fire once immediately, then align to the start of every minute.
+  function scheduleMinute() {
+    const now = new Date();
+    const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds() + 50;
+    setTimeout(() => { render(); scheduleMinute(); }, msToNextMinute);
+  }
+
+  render();
+  scheduleMinute();
+
+  return { render };
+})();
 
 // ----- Audio (synthesized chime sequences, no asset) -----------------------
 //
@@ -563,6 +597,11 @@ const settingsPanel = (() => {
             <span class="settings__value" data-key="slideDurationMs"
               data-options="30000:30s|45000:45s|60000:1m|90000:90s"></span>
           </div>
+          <div class="settings__row">
+            <span class="settings__label">Clock</span>
+            <span class="settings__value" data-key="showClock"
+              data-options="true:On|false:Off"></span>
+          </div>
         </div>
 
         <div class="settings__section">
@@ -643,6 +682,7 @@ const settingsPanel = (() => {
           syncChips();
           ui.update();
           if (key === 'themeMode') applyTheme();
+          if (key === 'showClock') clock.render();
         });
         wrap.appendChild(btn);
       }
