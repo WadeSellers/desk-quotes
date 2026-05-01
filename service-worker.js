@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v16';
+const VERSION = 'v17';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -28,9 +28,17 @@ const SHELL_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
-    // Bypass the HTTP cache so a freshly-deployed asset isn't masked by
-    // a still-warm browser cache entry from the previous version.
-    await cache.addAll(SHELL_ASSETS.map((url) => new Request(url, { cache: 'reload' })));
+    // Pre-cache assets one-by-one so a single slow or failed response
+    // (e.g. CDN propagation lag right after a deploy) cannot abort the
+    // entire install. Any asset that fails here is simply absent from the
+    // cache and will be fetched lazily on first use via stale-while-
+    // revalidate. Using Promise.allSettled means this always resolves, so
+    // skipWaiting always fires and the old cache is never orphaned.
+    await Promise.allSettled(
+      SHELL_ASSETS.map((url) =>
+        cache.add(new Request(url, { cache: 'reload' }))
+      )
+    );
     await self.skipWaiting();
   })());
 });
@@ -73,7 +81,7 @@ const networkErrorResponse = () =>
 
 // Fetch with a hard timeout so a stalled request doesn't make the whole
 // page hang for 30+ seconds before the browser gives up.
-function fetchWithTimeout(request, ms = 8000) {
+function fetchWithTimeout(request, ms = 15000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('fetch timeout')), ms);
     fetch(request).then(
