@@ -153,7 +153,12 @@ const clock = (() => {
     const time = now.toLocaleTimeString('en-US', {
       hour: 'numeric', minute: '2-digit', hour12: true,
     });
-    el.textContent = `${day} · ${time}`;
+    // Two-line layout: small day label above a larger readable time.
+    // Using innerHTML is safe here — both values come from the Date API,
+    // never from user input.
+    el.innerHTML =
+      `<span class="clock__day">${day}</span>` +
+      `<span class="clock__time">${time}</span>`;
   }
 
   // Fire once immediately, then align to the start of every minute.
