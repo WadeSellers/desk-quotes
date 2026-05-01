@@ -212,6 +212,21 @@ body {
   text-wrap: balance;
 }
 
+/* Drop cap — first letter is upright, weighted, and in the accent color.
+   inline-block + vertical-align lets it sit correctly within centered text
+   where a CSS float-based drop cap would break the layout. */
+.drop-cap {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1.72em;
+  color: var(--muted);
+  display: inline-block;
+  line-height: 0.78;
+  vertical-align: -0.22em;
+  margin-right: 0.04em;
+  transition: color 1800ms ease;
+}
+
 .text__rule {
   width: 32px;
   height: 1px;
