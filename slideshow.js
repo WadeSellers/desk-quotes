@@ -428,11 +428,7 @@ function renderSlide(item) {
 
   const quote = document.createElement('p');
   quote.className = 'text__quote';
-  // Drop cap: first letter gets its own span so it can be styled as an
-  // upright, weighted accent without breaking the centered text layout.
-  const first = escapeHtml(item.quote[0]);
-  const rest  = escapeHtml(item.quote.slice(1));
-  quote.innerHTML = `<span class="drop-cap">${first}</span>${rest}`;
+  quote.textContent = item.quote;
   text.appendChild(quote);
 
   const rule = document.createElement('div');
