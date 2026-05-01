@@ -6,6 +6,7 @@ const QUOTES_URL = 'quotes.json';
 const STORAGE = {
   settings: 'dq:settings',
   pomodoro: 'dq:pomodoro',
+  deck:     'dq:deck',
 };
 
 // ----- Settings -------------------------------------------------------------
@@ -251,6 +252,32 @@ class Deck {
     this.queue = [];
     this.lastDealt = null;
     this.lastMood = null;
+    this._restore();                 // resume mid-deck across reloads
+  }
+
+  // Persist queue as photoSlugs so the file is small and survives quote edits
+  // (unknown slugs are silently dropped on restore).
+  _save() {
+    try {
+      localStorage.setItem(STORAGE.deck, JSON.stringify({
+        queue:     this.queue.map((q) => q.photoSlug),
+        lastDealt: this.lastDealt?.photoSlug ?? null,
+        lastMood:  this.lastMood,
+      }));
+    } catch {}
+  }
+
+  _restore() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE.deck));
+      if (!saved || !Array.isArray(saved.queue)) return;
+      const bySlug = new Map(this.allItems.map((q) => [q.photoSlug, q]));
+      const queue  = saved.queue.map((s) => bySlug.get(s)).filter(Boolean);
+      if (queue.length === 0) return;   // stale / empty — let _refill() take over
+      this.queue     = queue;
+      this.lastDealt = bySlug.get(saved.lastDealt) ?? null;
+      this.lastMood  = saved.lastMood ?? null;
+    } catch {}
   }
 
   _refill() {
@@ -269,8 +296,9 @@ class Deck {
     if (this.lastDealt && items[0]?.photoSlug === this.lastDealt.photoSlug && items.length > 1) {
       [items[0], items[1]] = [items[1], items[0]];
     }
-    this.queue = items;
+    this.queue    = items;
     this.lastMood = mood;
+    this._save();
   }
 
   next() {
@@ -278,6 +306,7 @@ class Deck {
     if (mood !== this.lastMood || this.queue.length === 0) this._refill();
     const item = this.queue.shift();
     this.lastDealt = item;
+    this._save();
     return item;
   }
 
@@ -710,10 +739,13 @@ requestWakeLock();
   await loadImage(`assets/photos/${quotes[0].photoSlug}.jpg`);
   showNext(deck, ctx);
 
-  // Recursive setTimeout so a slide-duration change in settings takes
-  // effect on the next cycle without needing a reload.
+  // Cancellable timer so a tap-to-advance can reset the countdown cleanly.
+  // Also picks up slideDurationMs changes made in settings without a reload.
+  let _slideTimer = null;
   function scheduleNext() {
-    setTimeout(() => {
+    if (_slideTimer) clearTimeout(_slideTimer);
+    _slideTimer = setTimeout(() => {
+      _slideTimer = null;
       if (!(settings.get('pauseDuringWork') && pomodoro.phase === POM.WORK)) {
         showNext(deck, ctx);
       }
@@ -721,4 +753,12 @@ requestWakeLock();
     }, settings.get('slideDurationMs'));
   }
   scheduleNext();
+
+  // Tap anywhere on the stage (except the corner controls or settings overlay)
+  // to jump to the next slide immediately and reset the auto-advance timer.
+  stage.addEventListener('click', (e) => {
+    if (e.target.closest('#ctrl-pomodoro, #ctrl-settings, .settings')) return;
+    showNext(deck, ctx);
+    scheduleNext();
+  });
 })();
