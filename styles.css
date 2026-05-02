@@ -72,6 +72,16 @@ body.is-day.is-break    { --bg-rgb: 244, 236, 219; }
 body.is-evening.is-break { --bg-rgb: 235, 220, 195; }
 body.is-night.is-break   { --bg-rgb: 28, 22, 14; }
 
+/* Constellation long-break ceremony — forces a deep night-sky palette
+   regardless of the user's theme so the corner controls stay legible
+   over the canvas. Wins specificity ties via doubled class selector
+   and source order (this rule comes after the per-theme rules). */
+body.is-constellation.is-constellation {
+  --bg-rgb:    8, 10, 22;
+  --ink-rgb:   232, 220, 198;
+  --muted-rgb: 168, 138, 99;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -463,6 +473,39 @@ body.is-night.is-break .photo__img {
 html, body { transition: background-color 1800ms ease, color 1800ms ease; }
 .text { transition: background-color 1800ms ease; }
 .photo__img { transition: filter 1800ms ease, transform var(--kenburns) linear; }
+
+/* ------------------------------------------------------------
+   Constellation long-break ceremony — full-screen night sky
+   ------------------------------------------------------------ */
+
+.constellation-sky {
+  position: fixed;
+  inset: 0;
+  z-index: 5;            /* above #stage, below corner controls */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1800ms ease;
+  display: block;
+  /* Match the canvas fill color so the fade in/out has no seam */
+  background: rgb(8, 10, 22);
+}
+
+.constellation-sky.is-visible {
+  opacity: 1;
+  pointer-events: auto;  /* absorb taps so they don't reach the slide */
+}
+
+/* During constellation mode, the pomodoro button's warm-brown break
+   coloring reads as too dim against the deep navy sky. Promote both the
+   phase label and time digits to the bone --ink color for legibility. */
+body.is-constellation .ctrl-pomodoro.is-break .ctrl-pomodoro__phase,
+body.is-constellation .ctrl-pomodoro.is-break .ctrl-pomodoro__time {
+  color: var(--ink);
+}
+body.is-constellation .cycles__dot.is-filled {
+  background: var(--ink);
+  border-color: var(--ink);
+}
 
 /* ------------------------------------------------------------
    Pomodoro countdown — full-screen 3-2-1-Go overlay

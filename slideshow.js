@@ -174,6 +174,333 @@ const clock = (() => {
   return { render };
 })();
 
+// ----- Constellation long-break ceremony -----------------------------------
+//
+// During a long break the slideshow pauses and a calm night-sky canvas fades
+// in. Background stars twinkle continuously; six real constellations draw
+// themselves in hairline over the course of the break, one at a time on a
+// schedule scaled to longBreakMinutes. When the break ends — timer expiry
+// or user-tap-to-cancel — the canvas fades out and the slideshow resumes.
+//
+// All star positions are in normalized 0..1 coords within each constellation's
+// bounding box, which is itself in 0..1 coords across the canvas. Lines are
+// pairs of star indices. Hand-positioned to fit a portrait tablet without
+// overlap and to leave the bottom 14% clear of the corner controls.
+
+const CONSTELLATIONS = [
+  {
+    name: 'Cassiopeia',
+    bbox: { x: 0.07, y: 0.07, w: 0.34, h: 0.13 },
+    stars: [
+      { x: 0.00, y: 0.50, mag: 0.70 }, // Caph
+      { x: 0.25, y: 0.92, mag: 0.80 }, // Schedar
+      { x: 0.50, y: 0.30, mag: 0.60 }, // Gamma Cas
+      { x: 0.78, y: 0.85, mag: 0.70 }, // Ruchbah
+      { x: 1.00, y: 0.45, mag: 0.50 }, // Segin
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4]],
+    labelAt: { x: 0.45, y: 1.30 },
+  },
+  {
+    name: 'Cygnus',
+    bbox: { x: 0.56, y: 0.07, w: 0.36, h: 0.22 },
+    stars: [
+      { x: 0.95, y: 0.05, mag: 0.95 }, // Deneb
+      { x: 0.60, y: 0.45, mag: 0.70 }, // Sadr (heart of cross)
+      { x: 0.05, y: 0.95, mag: 0.60 }, // Albireo (foot)
+      { x: 0.18, y: 0.65, mag: 0.50 }, // Gienah (left wing)
+      { x: 0.92, y: 0.65, mag: 0.50 }, // Delta (right wing)
+    ],
+    lines: [[0,1],[1,2],[1,3],[1,4]],
+    labelAt: { x: 0.50, y: 1.12 },
+  },
+  {
+    name: 'Big Dipper',
+    bbox: { x: 0.15, y: 0.33, w: 0.65, h: 0.13 },
+    stars: [
+      { x: 0.00, y: 0.05, mag: 0.85 }, // Dubhe
+      { x: 0.05, y: 0.85, mag: 0.75 }, // Merak
+      { x: 0.25, y: 0.95, mag: 0.70 }, // Phecda
+      { x: 0.22, y: 0.30, mag: 0.60 }, // Megrez
+      { x: 0.45, y: 0.40, mag: 0.85 }, // Alioth
+      { x: 0.68, y: 0.55, mag: 0.70 }, // Mizar
+      { x: 0.95, y: 0.75, mag: 0.85 }, // Alkaid
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]],
+    labelAt: { x: 0.40, y: 1.30 },
+  },
+  {
+    name: 'Lyra',
+    bbox: { x: 0.10, y: 0.50, w: 0.20, h: 0.13 },
+    stars: [
+      { x: 0.55, y: 0.00, mag: 1.00 }, // Vega
+      { x: 0.78, y: 0.30, mag: 0.50 }, // Zeta
+      { x: 0.05, y: 0.55, mag: 0.50 }, // Sheliak
+      { x: 0.55, y: 0.55, mag: 0.50 }, // Delta
+      { x: 0.20, y: 0.95, mag: 0.55 }, // Sulafat
+    ],
+    lines: [[0,1],[1,3],[3,4],[4,2],[2,1]],
+    labelAt: { x: 0.45, y: 1.30 },
+  },
+  {
+    name: 'Leo',
+    bbox: { x: 0.40, y: 0.50, w: 0.50, h: 0.16 },
+    stars: [
+      { x: 0.05, y: 0.20, mag: 0.60 }, // Algenubi
+      { x: 0.10, y: 0.45, mag: 0.50 }, // Eta
+      { x: 0.20, y: 0.10, mag: 0.60 }, // Adhafera
+      { x: 0.22, y: 0.32, mag: 0.70 }, // Algieba
+      { x: 0.27, y: 0.65, mag: 0.95 }, // Regulus (heart, brightest)
+      { x: 0.65, y: 0.32, mag: 0.65 }, // Zosma
+      { x: 0.62, y: 0.55, mag: 0.60 }, // Chertan
+      { x: 0.95, y: 0.50, mag: 0.85 }, // Denebola (tail)
+    ],
+    lines: [[4,3],[3,2],[2,0],[0,1],[1,4],[3,5],[5,7],[7,6],[6,4]],
+    labelAt: { x: 0.45, y: 1.20 },
+  },
+  {
+    name: 'Orion',
+    bbox: { x: 0.20, y: 0.69, w: 0.52, h: 0.17 },
+    stars: [
+      { x: 0.45, y: 0.00, mag: 0.40 }, // Meissa (head)
+      { x: 0.18, y: 0.20, mag: 0.85 }, // Betelgeuse
+      { x: 0.78, y: 0.20, mag: 0.70 }, // Bellatrix
+      { x: 0.32, y: 0.60, mag: 0.70 }, // Mintaka (belt)
+      { x: 0.48, y: 0.60, mag: 0.70 }, // Alnilam (belt)
+      { x: 0.65, y: 0.60, mag: 0.70 }, // Alnitak (belt)
+      { x: 0.30, y: 0.95, mag: 0.70 }, // Saiph
+      { x: 0.82, y: 0.95, mag: 1.00 }, // Rigel
+    ],
+    lines: [[1,0],[2,0],[1,3],[2,5],[3,4],[4,5],[3,6],[5,7]],
+    labelAt: { x: 0.50, y: 1.12 },
+  },
+];
+
+const constellationSky = (() => {
+  let canvas, ctx;
+  let bgStars = [];
+  let raf = null;
+  let active = false;
+  let phaseStartTime = 0;
+  let schedule = [];
+  let dpr = 1;
+  let cssW = 0, cssH = 0;
+
+  function init() {
+    canvas = document.getElementById('constellation-sky');
+    if (!canvas) return false;
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+    return true;
+  }
+
+  function resize() {
+    if (!canvas) return;
+    // Cap DPR at 2 — beyond that the perf cost outweighs the visual gain.
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cssW = window.innerWidth;
+    cssH = window.innerHeight;
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width  = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    bgStars = generateStars(cssW, cssH, 220);
+  }
+
+  function generateStars(w, h, count) {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      out.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 0.7 + 0.3,
+        baseAlpha: Math.random() * 0.5 + 0.25,
+        twinkleSpeed: Math.random() * 0.0012 + 0.0004,
+        twinklePhase: Math.random() * Math.PI * 2,
+        warm: Math.random() < 0.25,    // a quarter are warm-colored
+      });
+    }
+    return out;
+  }
+
+  // Schedule scales to whatever longBreakMinutes is set to: 30s lead-in,
+  // staggered constellation entries, ~18% ambient tail at the end.
+  function buildSchedule() {
+    const totalSec = settings.get('longBreakMinutes') * 60;
+    const startOffset  = 30;
+    const ambientTail  = Math.max(60, totalSec * 0.18);
+    const drawingWindow = Math.max(60, totalSec - startOffset - ambientTail);
+    const stagger = drawingWindow / CONSTELLATIONS.length;
+    return CONSTELLATIONS.map((c, i) => ({
+      ...c,
+      startAt: startOffset + i * stagger,
+      drawDuration: Math.min(stagger * 0.55, 35),
+    }));
+  }
+
+  function start() {
+    if (active) return;
+    if (!canvas && !init()) return;
+    active = true;
+    // Anchor to absolute time so a reload mid-break resumes the schedule
+    // at the correct visual state instead of starting from the beginning.
+    phaseStartTime = pomodoro.endTime - pomodoro.totalDurationMs;
+    schedule = buildSchedule();
+    document.body.classList.add('is-constellation');
+    canvas.classList.add('is-visible');
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function stop() {
+    if (!active) return;
+    active = false;
+    document.body.classList.remove('is-constellation');
+    if (canvas) canvas.classList.remove('is-visible');
+    if (raf) cancelAnimationFrame(raf);
+    raf = null;
+  }
+
+  function loop(timestamp) {
+    if (!active) return;
+    render(timestamp);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function render(time) {
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    // Solid sky fill — keeps the fade-in crisp instead of revealing the
+    // slide through a half-transparent canvas.
+    ctx.fillStyle = 'rgb(8, 10, 22)';
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    // Background star field — twinkles continuously.
+    for (const s of bgStars) {
+      const tw = Math.sin(time * s.twinkleSpeed + s.twinklePhase) * 0.35 + 0.65;
+      const a = s.baseAlpha * tw;
+      ctx.fillStyle = s.warm
+        ? `rgba(255, 240, 220, ${a})`
+        : `rgba(220, 232, 255, ${a})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw each constellation that's reached its scheduled start time.
+    const elapsedSec = (Date.now() - phaseStartTime) / 1000;
+    for (const c of schedule) {
+      if (elapsedSec < c.startAt) continue;
+      const cElapsed = elapsedSec - c.startAt;
+      const progress = Math.min(cElapsed / c.drawDuration, 1);
+      drawConstellation(c, progress, time);
+    }
+
+    ctx.restore();
+  }
+
+  function drawConstellation(c, progress, time) {
+    // First 30% of progress: stars fade in sequentially.
+    // Next 70%: lines trace from star to star.
+    // Last 22%: label fades in.
+    const STAR_PHASE = 0.30;
+    const xs = c.stars.map(s => (c.bbox.x + s.x * c.bbox.w) * cssW);
+    const ys = c.stars.map(s => (c.bbox.y + s.y * c.bbox.h) * cssH);
+
+    for (let i = 0; i < c.stars.length; i++) {
+      const stagger = i / c.stars.length;
+      const sp = Math.max(0, Math.min(1, (progress / STAR_PHASE - stagger) * 2));
+      if (sp <= 0) continue;
+
+      const star = c.stars[i];
+      const mag = star.mag ?? 0.7;
+      const r = 1.1 + mag * 1.4;
+      const tw = Math.sin(time * 0.0007 + i * 1.7) * 0.12 + 0.88;
+      const alpha = sp * tw;
+
+      // Soft halo on the brightest stars only — cheap fill, not a gradient.
+      if (mag > 0.8) {
+        ctx.fillStyle = `rgba(255, 248, 232, ${alpha * 0.18})`;
+        ctx.beginPath();
+        ctx.arc(xs[i], ys[i], r * 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = `rgba(255, 248, 232, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(xs[i], ys[i], r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (progress > STAR_PHASE) {
+      const lp = (progress - STAR_PHASE) / (1 - STAR_PHASE);
+      drawLines(c, lp, xs, ys);
+    }
+
+    if (progress > 0.78) {
+      const labelAlpha = Math.min((progress - 0.78) / 0.18, 1) * 0.45;
+      drawLabel(c, labelAlpha);
+    }
+  }
+
+  // Trace lines segment-by-segment so each one appears to draw across the sky.
+  function drawLines(c, lineProgress, xs, ys) {
+    const numLines = c.lines.length;
+    const total = lineProgress * numLines;
+    const fullSegs = Math.floor(total);
+    const partial  = total - fullSegs;
+
+    ctx.strokeStyle = 'rgba(232, 220, 198, 0.32)';
+    ctx.lineWidth = 0.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+
+    for (let i = 0; i < Math.min(fullSegs, numLines); i++) {
+      const [a, b] = c.lines[i];
+      ctx.moveTo(xs[a], ys[a]);
+      ctx.lineTo(xs[b], ys[b]);
+    }
+
+    if (fullSegs < numLines && partial > 0) {
+      const [a, b] = c.lines[fullSegs];
+      const ax = xs[a], ay = ys[a];
+      const bx = xs[b], by = ys[b];
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + (bx - ax) * partial, ay + (by - ay) * partial);
+    }
+
+    ctx.stroke();
+  }
+
+  function drawLabel(c, alpha) {
+    const x = (c.bbox.x + (c.labelAt?.x ?? 0.5) * c.bbox.w) * cssW;
+    const y = (c.bbox.y + (c.labelAt?.y ?? 1.10) * c.bbox.h) * cssH;
+    ctx.fillStyle = `rgba(232, 220, 198, ${alpha})`;
+    ctx.font = '11px "EB Garamond", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    // Canvas has no letter-spacing — fake the tracking with double spaces.
+    const text = c.name.toUpperCase().split('').join('  ');
+    ctx.fillText(text, x, y);
+  }
+
+  if (init()) {
+    pomodoro.on((state) => {
+      if (state.phase === POM.LONG) start();
+      else if (active) stop();
+    });
+    // Survive a reload mid-long-break: kick straight into the ceremony.
+    // The endTime guard skips a stale-LONG state whose timer has already
+    // expired (avoids a brief flash before the pomodoro tick advances).
+    if (pomodoro.phase === POM.LONG &&
+        pomodoro.endTime && pomodoro.endTime > Date.now()) {
+      start();
+    }
+  }
+})();
+
 // ----- Audio (synthesized chime sequences, no asset) -----------------------
 //
 // Each chime is a short melodic phrase rather than a single tone — friendlier
@@ -501,9 +828,11 @@ const ui = (() => {
       ctrlPom.classList.toggle('is-urgent', remaining > 0 && remaining <= 30_000);
     }
 
-    // Body palette for break
-    document.body.classList.toggle('is-break',
-      phase === POM.BREAK || phase === POM.LONG);
+    // Body palette for break — short BREAK only. LONG break gets the
+    // is-constellation class instead (managed by the constellation IIFE),
+    // which forces a deep night-sky palette regardless of the user's
+    // theme.
+    document.body.classList.toggle('is-break', phase === POM.BREAK);
 
     // Cycle dots
     const max = settings.get('cyclesBeforeLongBreak');
@@ -791,7 +1120,10 @@ requestWakeLock();
     if (_slideTimer) clearTimeout(_slideTimer);
     _slideTimer = setTimeout(() => {
       _slideTimer = null;
-      if (!(settings.get('pauseDuringWork') && pomodoro.phase === POM.WORK)) {
+      const phase = pomodoro.phase;
+      const pausedForWork = settings.get('pauseDuringWork') && phase === POM.WORK;
+      const pausedForLong = phase === POM.LONG;     // constellation ceremony
+      if (!pausedForWork && !pausedForLong) {
         showNext(deck, ctx);
       }
       scheduleNext();
@@ -801,8 +1133,10 @@ requestWakeLock();
 
   // Tap anywhere on the stage (except the corner controls or settings overlay)
   // to jump to the next slide immediately and reset the auto-advance timer.
+  // Skipped during LONG since the constellation canvas covers the stage.
   stage.addEventListener('click', (e) => {
     if (e.target.closest('#ctrl-pomodoro, #ctrl-settings, .settings')) return;
+    if (pomodoro.phase === POM.LONG) return;
     showNext(deck, ctx);
     scheduleNext();
   });
