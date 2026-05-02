@@ -9,6 +9,20 @@ const STORAGE = {
   deck:     'dq:deck',
 };
 
+// ============================================================
+// TEST MODE — quick-cycle preview of the constellation ceremony.
+// Tap pomodoro → 3-2-1-Go countdown → 3s "work" → straight into a
+// 2-minute long break with the full constellation show.
+// Set TEST_MODE = false (or delete this block) when done previewing.
+// ============================================================
+const TEST_MODE = true;
+const TEST_OVERRIDES = {
+  workMinutes: 0.05,         // 3 seconds of "work"
+  breakMinutes: 0.05,        // 3 seconds (unused with cyclesBeforeLongBreak=1)
+  longBreakMinutes: 2,       // 2-minute long break — fits all 6 constellations
+  cyclesBeforeLongBreak: 1,  // first cycle goes straight to long break
+};
+
 // ----- Settings -------------------------------------------------------------
 
 const DEFAULTS = {
@@ -31,7 +45,7 @@ const settings = (() => {
     state = { ...DEFAULTS };
   }
   return {
-    get: (k) => state[k],
+    get: (k) => (TEST_MODE && k in TEST_OVERRIDES) ? TEST_OVERRIDES[k] : state[k],
     set: (k, v) => {
       state[k] = v;
       try { localStorage.setItem(STORAGE.settings, JSON.stringify(state)); } catch {}
@@ -324,13 +338,14 @@ const constellationSky = (() => {
     return out;
   }
 
-  // Schedule scales to whatever longBreakMinutes is set to: 30s lead-in,
-  // staggered constellation entries, ~18% ambient tail at the end.
+  // Schedule scales to whatever longBreakMinutes is set to. Lead-in and
+  // ambient tail scale proportionally so a short break (e.g. test mode)
+  // gets a usable schedule rather than slamming into hardcoded floors.
   function buildSchedule() {
     const totalSec = settings.get('longBreakMinutes') * 60;
-    const startOffset  = 30;
-    const ambientTail  = Math.max(60, totalSec * 0.18);
-    const drawingWindow = Math.max(60, totalSec - startOffset - ambientTail);
+    const startOffset  = Math.min(30, totalSec * 0.08);
+    const ambientTail  = Math.min(180, Math.max(15, totalSec * 0.12));
+    const drawingWindow = Math.max(20, totalSec - startOffset - ambientTail);
     const stagger = drawingWindow / CONSTELLATIONS.length;
     return CONSTELLATIONS.map((c, i) => ({
       ...c,
