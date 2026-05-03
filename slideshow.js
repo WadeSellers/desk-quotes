@@ -205,82 +205,108 @@ const clock = (() => {
 
 class Meteor {
   constructor(canvasW, canvasH) {
-    // Radiant direction — roughly down-and-right, with small per-meteor
-    // jitter so streaks aren't perfectly parallel.
-    const baseAngle = Math.PI * 0.30;                   // ~54° from +x
-    const angleJitter = (Math.random() - 0.5) * 0.45;
-    const angle = baseAngle + angleJitter;
+    this.canvasW = canvasW;
+    this.canvasH = canvasH;
 
-    // Spawn from the top edge or the upper-left edge of the canvas, biased
-    // toward the side that lines up with the radiant direction so meteors
-    // travel a meaningful distance before going off the bottom-right.
-    if (Math.random() < 0.55) {
-      this.x = Math.random() * canvasW * 0.85;
-      this.y = -40;
-    } else {
-      this.x = -40;
-      this.y = Math.random() * canvasH * 0.55;
-    }
-
-    // Type: 65% small, 25% medium, 10% fireball.
-    const r = Math.random();
+    // Pick the type first — it determines speed, length, and (for the close
+    // approach) overrides the angle to a tighter cone for drama.
+    const sizeRand = Math.random();
     let speed;
-    if (r < 0.65) {
-      this.length     = 50 + Math.random() * 35;
-      this.brightness = 0.32 + Math.random() * 0.18;
-      this.maxLife    = 0.55 + Math.random() * 0.40;
-      this.headRadius = 1.0;
-      this.glow       = 0;
-      speed           = 480 + Math.random() * 220;
-    } else if (r < 0.90) {
-      this.length     = 90 + Math.random() * 50;
-      this.brightness = 0.55 + Math.random() * 0.20;
-      this.maxLife    = 0.85 + Math.random() * 0.50;
-      this.headRadius = 1.6;
-      this.glow       = 0.25;
-      speed           = 380 + Math.random() * 220;
-    } else {
-      // Fireball — slower, longer, brighter, with a real glow halo.
+    let useRadiant = true;
+    let radiantSpread = 0.45;     // radians of jitter around the radiant
+
+    if (sizeRand < 0.04) {
+      // CLOSE APPROACH — rare, fast, thick, glowing. Feels like one's
+      // just whipped past your face.
+      this.length     = 320 + Math.random() * 200;
+      this.brightness = 0.95;
+      this.headRadius = 3.0 + Math.random() * 1.5;
+      this.glow       = 0.85;
+      this.lineWidth  = 3.2 + Math.random() * 2.5;
+      speed           = 1400 + Math.random() * 700;
+      radiantSpread   = 0.30;     // tighter, dramatic
+    } else if (sizeRand < 0.13) {
+      // Fireball
       this.length     = 150 + Math.random() * 90;
       this.brightness = 0.85 + Math.random() * 0.15;
-      this.maxLife    = 1.30 + Math.random() * 0.90;
-      this.headRadius = 2.4;
+      this.headRadius = 2.2 + Math.random() * 0.6;
       this.glow       = 0.55;
-      speed           = 240 + Math.random() * 180;
+      this.lineWidth  = 1.5 + Math.random() * 0.7;
+      speed           = 280 + Math.random() * 200;
+    } else if (sizeRand < 0.38) {
+      // Medium
+      this.length     = 90 + Math.random() * 60;
+      this.brightness = 0.55 + Math.random() * 0.20;
+      this.headRadius = 1.4 + Math.random() * 0.4;
+      this.glow       = 0.20;
+      this.lineWidth  = 1.0 + Math.random() * 0.4;
+      speed           = 400 + Math.random() * 240;
+    } else {
+      // Small (most common)
+      this.length     = 50 + Math.random() * 40;
+      this.brightness = 0.32 + Math.random() * 0.20;
+      this.headRadius = 0.9 + Math.random() * 0.3;
+      this.glow       = 0;
+      this.lineWidth  = 0.6 + Math.random() * 0.4;
+      speed           = 500 + Math.random() * 220;
+    }
+
+    // ~9% of meteors are sporadic — they don't share the radiant. Visual
+    // variety. Close approaches stay on the radiant for drama.
+    if (this.glow < 0.8 && Math.random() < 0.09) useRadiant = false;
+
+    let angle;
+    if (useRadiant) {
+      // Radiant: roughly down-and-right (~54° from +x).
+      angle = Math.PI * 0.30 + (Math.random() - 0.5) * radiantSpread;
+    } else {
+      // Sporadic: any direction.
+      angle = Math.random() * Math.PI * 2;
     }
 
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
 
-    // Color: 78% white, 12% warm, 10% cool. Stored as the leading part of
-    // an rgba() string so we can append "alpha)" cheaply each frame.
+    // Spawn just outside the appropriate edge based on direction so the
+    // meteor has a chance to traverse the canvas. The dominant velocity
+    // axis decides which edge it enters from.
+    const padding = this.length + 40;
+    if (Math.abs(this.vx) > Math.abs(this.vy)) {
+      // Mostly horizontal — enter from left or right
+      this.x = this.vx > 0 ? -padding : canvasW + padding;
+      this.y = Math.random() * canvasH;
+    } else {
+      // Mostly vertical / steep diagonal — enter from top or bottom
+      this.x = Math.random() * canvasW;
+      this.y = this.vy > 0 ? -padding : canvasH + padding;
+    }
+
+    // Color. Close approaches lean warm-gold or bright white. Otherwise:
+    // 78% white, 12% warm, 10% cool. Stored as the leading part of an
+    // rgba() string so the per-frame composition is cheap.
     const c = Math.random();
-    if (c < 0.78)      this.colorBase = 'rgba(255,248,232,';
-    else if (c < 0.90) this.colorBase = 'rgba(255,210,150,';
-    else               this.colorBase = 'rgba(180,210,255,';
-
-    this.life = 0;
-    this.canvasW = canvasW;
-    this.canvasH = canvasH;
-    this.deathX = this.x;
-    this.deathY = this.y;
-  }
-
-  update(dt) {
-    this.life += dt;
-    if (this.life < this.maxLife) {
-      this.x += this.vx * dt;
-      this.y += this.vy * dt;
-      this.deathX = this.x;
-      this.deathY = this.y;
+    if (this.glow >= 0.8) {
+      this.colorBase = c < 0.55
+        ? 'rgba(255,225,180,'   // warm gold
+        : 'rgba(255,250,240,';  // bright white
+    } else if (c < 0.78) {
+      this.colorBase = 'rgba(255,248,232,';
+    } else if (c < 0.90) {
+      this.colorBase = 'rgba(255,210,150,';
+    } else {
+      this.colorBase = 'rgba(180,210,255,';
     }
   }
 
-  // Considered dead once the post-death fade has finished, OR once the
-  // head has flown well past the canvas edge.
+  update(dt) {
+    // Always moving. No mid-air death, no stationary fade — the meteor
+    // travels at constant velocity until it's well off the canvas.
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+
   isDead() {
-    if (this.life > this.maxLife + 0.7) return true;
-    const margin = this.length + 60;
+    const margin = this.length + 40;
     return this.x > this.canvasW + margin
         || this.y > this.canvasH + margin
         || this.x < -margin
@@ -288,59 +314,42 @@ class Meteor {
   }
 
   draw(ctx) {
-    const alive = this.life < this.maxLife;
     const speed = Math.hypot(this.vx, this.vy);
     if (speed === 0) return;
 
-    let headX, headY, alphaScale;
-    if (alive) {
-      headX = this.x;
-      headY = this.y;
-      alphaScale = 1;
-    } else {
-      // After the head burns out, the trail lingers briefly, fading.
-      headX = this.deathX;
-      headY = this.deathY;
-      const overage = this.life - this.maxLife;
-      alphaScale = Math.max(0, 1 - overage / 0.7);
-      if (alphaScale <= 0.01) return;
-    }
-
     const dirX = this.vx / speed;
     const dirY = this.vy / speed;
-    const tailX = headX - dirX * this.length;
-    const tailY = headY - dirY * this.length;
+    const tailX = this.x - dirX * this.length;
+    const tailY = this.y - dirY * this.length;
 
     // Trail — linear gradient from transparent tail to bright head.
-    const grad = ctx.createLinearGradient(tailX, tailY, headX, headY);
+    const grad = ctx.createLinearGradient(tailX, tailY, this.x, this.y);
     grad.addColorStop(0, `${this.colorBase}0)`);
-    grad.addColorStop(1, `${this.colorBase}${(this.brightness * alphaScale).toFixed(3)})`);
+    grad.addColorStop(1, `${this.colorBase}${this.brightness.toFixed(3)})`);
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 0.8 + this.brightness * 1.6;
+    ctx.lineWidth = this.lineWidth;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(tailX, tailY);
-    ctx.lineTo(headX, headY);
+    ctx.lineTo(this.x, this.y);
     ctx.stroke();
 
-    // Head — only while alive (the burn-out moment is when the head dies).
-    if (alive) {
-      ctx.fillStyle = `${this.colorBase}${this.brightness.toFixed(3)})`;
-      ctx.beginPath();
-      ctx.arc(headX, headY, this.headRadius, 0, Math.PI * 2);
-      ctx.fill();
+    // Bright head.
+    ctx.fillStyle = `${this.colorBase}${this.brightness.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.headRadius, 0, Math.PI * 2);
+    ctx.fill();
 
-      // Soft glow on bright meteors — single radial gradient fill.
-      if (this.glow > 0) {
-        const glowR = this.headRadius * 6;
-        const g = ctx.createRadialGradient(headX, headY, 0, headX, headY, glowR);
-        g.addColorStop(0, `${this.colorBase}${(this.brightness * this.glow).toFixed(3)})`);
-        g.addColorStop(1, `${this.colorBase}0)`);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(headX, headY, glowR, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    // Glow halo on bright/close meteors — single radial gradient fill.
+    if (this.glow > 0) {
+      const glowR = this.headRadius * (this.glow >= 0.8 ? 9 : 6);
+      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
+      g.addColorStop(0, `${this.colorBase}${(this.brightness * this.glow).toFixed(3)})`);
+      g.addColorStop(1, `${this.colorBase}0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 }
@@ -430,23 +439,30 @@ const constellationSky = (() => {
   }
 
   function update(dt) {
-    // Spawn rate: ~1.0 meteors/sec average. Use a time accumulator so the
+    // Continuous shower: ~2.6 meteors/sec average. Time accumulator so the
     // rate is independent of frame rate and survives long requestAnimation
     // gaps cleanly.
-    const baseRate = 1.0;
+    const baseRate = 2.6;
     spawnAccumulator += dt * baseRate;
     while (spawnAccumulator >= 1) {
       spawnAccumulator -= 1;
-      // Slight jitter — sometimes two near-simultaneous spawns, sometimes a
-      // pause — so the shower doesn't feel metronomic.
-      if (Math.random() < 0.85) meteors.push(new Meteor(cssW, cssH));
-      if (Math.random() < 0.20) meteors.push(new Meteor(cssW, cssH));
+      meteors.push(new Meteor(cssW, cssH));
+    }
+
+    // Bursts — a sudden flurry of 6-12 meteors, roughly once every 18s.
+    // Creates moments where the sky lights up before settling back.
+    if (Math.random() < dt * 0.055) {
+      const burstSize = 6 + Math.floor(Math.random() * 7);
+      for (let i = 0; i < burstSize; i++) {
+        meteors.push(new Meteor(cssW, cssH));
+      }
     }
 
     for (const m of meteors) m.update(dt);
-    if (meteors.length > 80) {
-      // Hard cap as a safety net — should never realistically be reached.
-      meteors = meteors.filter((m) => !m.isDead()).slice(-80);
+
+    // Cull off-screen meteors. Hard cap at 120 as a safety net.
+    if (meteors.length > 120) {
+      meteors = meteors.filter((m) => !m.isDead()).slice(-120);
     } else {
       meteors = meteors.filter((m) => !m.isDead());
     }
