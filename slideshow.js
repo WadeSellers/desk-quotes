@@ -188,117 +188,174 @@ const clock = (() => {
   return { render };
 })();
 
-// ----- Constellation long-break ceremony -----------------------------------
+// ----- Meteor shower long-break ceremony -----------------------------------
 //
 // During a long break the slideshow pauses and a calm night-sky canvas fades
-// in. Background stars twinkle continuously; six real constellations draw
-// themselves in hairline over the course of the break, one at a time on a
-// schedule scaled to longBreakMinutes. When the break ends — timer expiry
-// or user-tap-to-cancel — the canvas fades out and the slideshow resumes.
+// in. Background stars twinkle continuously while a steady meteor shower
+// streaks across the sky — most are subtle small streaks, with occasional
+// medium meteors and rare fireballs (slower, brighter, with a soft glow at
+// the head). Streaks come from a "radiant" direction with small angular
+// variation, the way real showers do, so the scene reads as one shower
+// rather than scatter. When the break ends — timer expiry or tap-to-cancel
+// — the canvas fades out and the slideshow resumes.
 //
-// All star positions are in normalized 0..1 coords within each constellation's
-// bounding box, which is itself in 0..1 coords across the canvas. Lines are
-// pairs of star indices. Hand-positioned to fit a portrait tablet without
-// overlap and to leave the bottom 14% clear of the corner controls.
+// IIFE name and CSS class is-constellation are preserved from the previous
+// iteration to keep the surface area of this change small. Read them as
+// "long-break night sky" — the contents are now meteors, not constellations.
 
-const CONSTELLATIONS = [
-  {
-    name: 'Cassiopeia',
-    bbox: { x: 0.07, y: 0.07, w: 0.34, h: 0.13 },
-    stars: [
-      { x: 0.00, y: 0.50, mag: 0.70 }, // Caph
-      { x: 0.25, y: 0.92, mag: 0.80 }, // Schedar
-      { x: 0.50, y: 0.30, mag: 0.60 }, // Gamma Cas
-      { x: 0.78, y: 0.85, mag: 0.70 }, // Ruchbah
-      { x: 1.00, y: 0.45, mag: 0.50 }, // Segin
-    ],
-    lines: [[0,1],[1,2],[2,3],[3,4]],
-    labelAt: { x: 0.45, y: 1.30 },
-  },
-  {
-    name: 'Cygnus',
-    bbox: { x: 0.56, y: 0.07, w: 0.36, h: 0.22 },
-    stars: [
-      { x: 0.95, y: 0.05, mag: 0.95 }, // Deneb
-      { x: 0.60, y: 0.45, mag: 0.70 }, // Sadr (heart of cross)
-      { x: 0.05, y: 0.95, mag: 0.60 }, // Albireo (foot)
-      { x: 0.18, y: 0.65, mag: 0.50 }, // Gienah (left wing)
-      { x: 0.92, y: 0.65, mag: 0.50 }, // Delta (right wing)
-    ],
-    lines: [[0,1],[1,2],[1,3],[1,4]],
-    labelAt: { x: 0.50, y: 1.12 },
-  },
-  {
-    name: 'Big Dipper',
-    bbox: { x: 0.15, y: 0.33, w: 0.65, h: 0.13 },
-    stars: [
-      { x: 0.00, y: 0.05, mag: 0.85 }, // Dubhe
-      { x: 0.05, y: 0.85, mag: 0.75 }, // Merak
-      { x: 0.25, y: 0.95, mag: 0.70 }, // Phecda
-      { x: 0.22, y: 0.30, mag: 0.60 }, // Megrez
-      { x: 0.45, y: 0.40, mag: 0.85 }, // Alioth
-      { x: 0.68, y: 0.55, mag: 0.70 }, // Mizar
-      { x: 0.95, y: 0.75, mag: 0.85 }, // Alkaid
-    ],
-    lines: [[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]],
-    labelAt: { x: 0.40, y: 1.30 },
-  },
-  {
-    name: 'Lyra',
-    bbox: { x: 0.10, y: 0.50, w: 0.20, h: 0.13 },
-    stars: [
-      { x: 0.55, y: 0.00, mag: 1.00 }, // Vega
-      { x: 0.78, y: 0.30, mag: 0.50 }, // Zeta
-      { x: 0.05, y: 0.55, mag: 0.50 }, // Sheliak
-      { x: 0.55, y: 0.55, mag: 0.50 }, // Delta
-      { x: 0.20, y: 0.95, mag: 0.55 }, // Sulafat
-    ],
-    lines: [[0,1],[1,3],[3,4],[4,2],[2,1]],
-    labelAt: { x: 0.45, y: 1.30 },
-  },
-  {
-    name: 'Leo',
-    bbox: { x: 0.40, y: 0.50, w: 0.50, h: 0.16 },
-    stars: [
-      { x: 0.05, y: 0.20, mag: 0.60 }, // Algenubi
-      { x: 0.10, y: 0.45, mag: 0.50 }, // Eta
-      { x: 0.20, y: 0.10, mag: 0.60 }, // Adhafera
-      { x: 0.22, y: 0.32, mag: 0.70 }, // Algieba
-      { x: 0.27, y: 0.65, mag: 0.95 }, // Regulus (heart, brightest)
-      { x: 0.65, y: 0.32, mag: 0.65 }, // Zosma
-      { x: 0.62, y: 0.55, mag: 0.60 }, // Chertan
-      { x: 0.95, y: 0.50, mag: 0.85 }, // Denebola (tail)
-    ],
-    lines: [[4,3],[3,2],[2,0],[0,1],[1,4],[3,5],[5,7],[7,6],[6,4]],
-    labelAt: { x: 0.45, y: 1.20 },
-  },
-  {
-    name: 'Orion',
-    bbox: { x: 0.20, y: 0.69, w: 0.52, h: 0.17 },
-    stars: [
-      { x: 0.45, y: 0.00, mag: 0.40 }, // Meissa (head)
-      { x: 0.18, y: 0.20, mag: 0.85 }, // Betelgeuse
-      { x: 0.78, y: 0.20, mag: 0.70 }, // Bellatrix
-      { x: 0.32, y: 0.60, mag: 0.70 }, // Mintaka (belt)
-      { x: 0.48, y: 0.60, mag: 0.70 }, // Alnilam (belt)
-      { x: 0.65, y: 0.60, mag: 0.70 }, // Alnitak (belt)
-      { x: 0.30, y: 0.95, mag: 0.70 }, // Saiph
-      { x: 0.82, y: 0.95, mag: 1.00 }, // Rigel
-    ],
-    lines: [[1,0],[2,0],[1,3],[2,5],[3,4],[4,5],[3,6],[5,7]],
-    labelAt: { x: 0.50, y: 1.12 },
-  },
-];
+class Meteor {
+  constructor(canvasW, canvasH) {
+    // Radiant direction — roughly down-and-right, with small per-meteor
+    // jitter so streaks aren't perfectly parallel.
+    const baseAngle = Math.PI * 0.30;                   // ~54° from +x
+    const angleJitter = (Math.random() - 0.5) * 0.45;
+    const angle = baseAngle + angleJitter;
+
+    // Spawn from the top edge or the upper-left edge of the canvas, biased
+    // toward the side that lines up with the radiant direction so meteors
+    // travel a meaningful distance before going off the bottom-right.
+    if (Math.random() < 0.55) {
+      this.x = Math.random() * canvasW * 0.85;
+      this.y = -40;
+    } else {
+      this.x = -40;
+      this.y = Math.random() * canvasH * 0.55;
+    }
+
+    // Type: 65% small, 25% medium, 10% fireball.
+    const r = Math.random();
+    let speed;
+    if (r < 0.65) {
+      this.length     = 50 + Math.random() * 35;
+      this.brightness = 0.32 + Math.random() * 0.18;
+      this.maxLife    = 0.55 + Math.random() * 0.40;
+      this.headRadius = 1.0;
+      this.glow       = 0;
+      speed           = 480 + Math.random() * 220;
+    } else if (r < 0.90) {
+      this.length     = 90 + Math.random() * 50;
+      this.brightness = 0.55 + Math.random() * 0.20;
+      this.maxLife    = 0.85 + Math.random() * 0.50;
+      this.headRadius = 1.6;
+      this.glow       = 0.25;
+      speed           = 380 + Math.random() * 220;
+    } else {
+      // Fireball — slower, longer, brighter, with a real glow halo.
+      this.length     = 150 + Math.random() * 90;
+      this.brightness = 0.85 + Math.random() * 0.15;
+      this.maxLife    = 1.30 + Math.random() * 0.90;
+      this.headRadius = 2.4;
+      this.glow       = 0.55;
+      speed           = 240 + Math.random() * 180;
+    }
+
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+
+    // Color: 78% white, 12% warm, 10% cool. Stored as the leading part of
+    // an rgba() string so we can append "alpha)" cheaply each frame.
+    const c = Math.random();
+    if (c < 0.78)      this.colorBase = 'rgba(255,248,232,';
+    else if (c < 0.90) this.colorBase = 'rgba(255,210,150,';
+    else               this.colorBase = 'rgba(180,210,255,';
+
+    this.life = 0;
+    this.canvasW = canvasW;
+    this.canvasH = canvasH;
+    this.deathX = this.x;
+    this.deathY = this.y;
+  }
+
+  update(dt) {
+    this.life += dt;
+    if (this.life < this.maxLife) {
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.deathX = this.x;
+      this.deathY = this.y;
+    }
+  }
+
+  // Considered dead once the post-death fade has finished, OR once the
+  // head has flown well past the canvas edge.
+  isDead() {
+    if (this.life > this.maxLife + 0.7) return true;
+    const margin = this.length + 60;
+    return this.x > this.canvasW + margin
+        || this.y > this.canvasH + margin
+        || this.x < -margin
+        || this.y < -margin;
+  }
+
+  draw(ctx) {
+    const alive = this.life < this.maxLife;
+    const speed = Math.hypot(this.vx, this.vy);
+    if (speed === 0) return;
+
+    let headX, headY, alphaScale;
+    if (alive) {
+      headX = this.x;
+      headY = this.y;
+      alphaScale = 1;
+    } else {
+      // After the head burns out, the trail lingers briefly, fading.
+      headX = this.deathX;
+      headY = this.deathY;
+      const overage = this.life - this.maxLife;
+      alphaScale = Math.max(0, 1 - overage / 0.7);
+      if (alphaScale <= 0.01) return;
+    }
+
+    const dirX = this.vx / speed;
+    const dirY = this.vy / speed;
+    const tailX = headX - dirX * this.length;
+    const tailY = headY - dirY * this.length;
+
+    // Trail — linear gradient from transparent tail to bright head.
+    const grad = ctx.createLinearGradient(tailX, tailY, headX, headY);
+    grad.addColorStop(0, `${this.colorBase}0)`);
+    grad.addColorStop(1, `${this.colorBase}${(this.brightness * alphaScale).toFixed(3)})`);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 0.8 + this.brightness * 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tailX, tailY);
+    ctx.lineTo(headX, headY);
+    ctx.stroke();
+
+    // Head — only while alive (the burn-out moment is when the head dies).
+    if (alive) {
+      ctx.fillStyle = `${this.colorBase}${this.brightness.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(headX, headY, this.headRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Soft glow on bright meteors — single radial gradient fill.
+      if (this.glow > 0) {
+        const glowR = this.headRadius * 6;
+        const g = ctx.createRadialGradient(headX, headY, 0, headX, headY, glowR);
+        g.addColorStop(0, `${this.colorBase}${(this.brightness * this.glow).toFixed(3)})`);
+        g.addColorStop(1, `${this.colorBase}0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(headX, headY, glowR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
 
 const constellationSky = (() => {
   let canvas, ctx;
   let bgStars = [];
+  let meteors = [];
   let raf = null;
   let active = false;
-  let phaseStartTime = 0;
-  let schedule = [];
   let dpr = 1;
   let cssW = 0, cssH = 0;
+  let lastFrameMs = 0;
+  // Time-budget for spawning so the rate is independent of frame rate.
+  let spawnAccumulator = 0;
 
   function init() {
     canvas = document.getElementById('constellation-sky');
@@ -320,6 +377,8 @@ const constellationSky = (() => {
     canvas.style.width  = cssW + 'px';
     canvas.style.height = cssH + 'px';
     bgStars = generateStars(cssW, cssH, 220);
+    // Update existing meteors' bounds so off-screen detection stays correct.
+    for (const m of meteors) { m.canvasW = cssW; m.canvasH = cssH; }
   }
 
   function generateStars(w, h, count) {
@@ -338,30 +397,13 @@ const constellationSky = (() => {
     return out;
   }
 
-  // Schedule scales to whatever longBreakMinutes is set to. Lead-in and
-  // ambient tail scale proportionally so a short break (e.g. test mode)
-  // gets a usable schedule rather than slamming into hardcoded floors.
-  function buildSchedule() {
-    const totalSec = settings.get('longBreakMinutes') * 60;
-    const startOffset  = Math.min(30, totalSec * 0.08);
-    const ambientTail  = Math.min(180, Math.max(15, totalSec * 0.12));
-    const drawingWindow = Math.max(20, totalSec - startOffset - ambientTail);
-    const stagger = drawingWindow / CONSTELLATIONS.length;
-    return CONSTELLATIONS.map((c, i) => ({
-      ...c,
-      startAt: startOffset + i * stagger,
-      drawDuration: Math.min(stagger * 0.55, 35),
-    }));
-  }
-
   function start() {
     if (active) return;
     if (!canvas && !init()) return;
     active = true;
-    // Anchor to absolute time so a reload mid-break resumes the schedule
-    // at the correct visual state instead of starting from the beginning.
-    phaseStartTime = pomodoro.endTime - pomodoro.totalDurationMs;
-    schedule = buildSchedule();
+    meteors = [];
+    spawnAccumulator = 0;
+    lastFrameMs = 0;
     document.body.classList.add('is-constellation');
     canvas.classList.add('is-visible');
     if (raf) cancelAnimationFrame(raf);
@@ -379,8 +421,35 @@ const constellationSky = (() => {
 
   function loop(timestamp) {
     if (!active) return;
+    // dt in seconds, clamped to avoid giant jumps on tab-resume.
+    const dt = lastFrameMs ? Math.min((timestamp - lastFrameMs) / 1000, 0.05) : 0.016;
+    lastFrameMs = timestamp;
+    update(dt);
     render(timestamp);
     raf = requestAnimationFrame(loop);
+  }
+
+  function update(dt) {
+    // Spawn rate: ~1.0 meteors/sec average. Use a time accumulator so the
+    // rate is independent of frame rate and survives long requestAnimation
+    // gaps cleanly.
+    const baseRate = 1.0;
+    spawnAccumulator += dt * baseRate;
+    while (spawnAccumulator >= 1) {
+      spawnAccumulator -= 1;
+      // Slight jitter — sometimes two near-simultaneous spawns, sometimes a
+      // pause — so the shower doesn't feel metronomic.
+      if (Math.random() < 0.85) meteors.push(new Meteor(cssW, cssH));
+      if (Math.random() < 0.20) meteors.push(new Meteor(cssW, cssH));
+    }
+
+    for (const m of meteors) m.update(dt);
+    if (meteors.length > 80) {
+      // Hard cap as a safety net — should never realistically be reached.
+      meteors = meteors.filter((m) => !m.isDead()).slice(-80);
+    } else {
+      meteors = meteors.filter((m) => !m.isDead());
+    }
   }
 
   function render(time) {
@@ -404,101 +473,10 @@ const constellationSky = (() => {
       ctx.fill();
     }
 
-    // Draw each constellation that's reached its scheduled start time.
-    const elapsedSec = (Date.now() - phaseStartTime) / 1000;
-    for (const c of schedule) {
-      if (elapsedSec < c.startAt) continue;
-      const cElapsed = elapsedSec - c.startAt;
-      const progress = Math.min(cElapsed / c.drawDuration, 1);
-      drawConstellation(c, progress, time);
-    }
+    // Meteors.
+    for (const m of meteors) m.draw(ctx);
 
     ctx.restore();
-  }
-
-  function drawConstellation(c, progress, time) {
-    // First 30% of progress: stars fade in sequentially.
-    // Next 70%: lines trace from star to star.
-    // Last 22%: label fades in.
-    const STAR_PHASE = 0.30;
-    const xs = c.stars.map(s => (c.bbox.x + s.x * c.bbox.w) * cssW);
-    const ys = c.stars.map(s => (c.bbox.y + s.y * c.bbox.h) * cssH);
-
-    for (let i = 0; i < c.stars.length; i++) {
-      const stagger = i / c.stars.length;
-      const sp = Math.max(0, Math.min(1, (progress / STAR_PHASE - stagger) * 2));
-      if (sp <= 0) continue;
-
-      const star = c.stars[i];
-      const mag = star.mag ?? 0.7;
-      const r = 1.1 + mag * 1.4;
-      const tw = Math.sin(time * 0.0007 + i * 1.7) * 0.12 + 0.88;
-      const alpha = sp * tw;
-
-      // Soft halo on the brightest stars only — cheap fill, not a gradient.
-      if (mag > 0.8) {
-        ctx.fillStyle = `rgba(255, 248, 232, ${alpha * 0.18})`;
-        ctx.beginPath();
-        ctx.arc(xs[i], ys[i], r * 3.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.fillStyle = `rgba(255, 248, 232, ${alpha})`;
-      ctx.beginPath();
-      ctx.arc(xs[i], ys[i], r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (progress > STAR_PHASE) {
-      const lp = (progress - STAR_PHASE) / (1 - STAR_PHASE);
-      drawLines(c, lp, xs, ys);
-    }
-
-    if (progress > 0.78) {
-      const labelAlpha = Math.min((progress - 0.78) / 0.18, 1) * 0.45;
-      drawLabel(c, labelAlpha);
-    }
-  }
-
-  // Trace lines segment-by-segment so each one appears to draw across the sky.
-  function drawLines(c, lineProgress, xs, ys) {
-    const numLines = c.lines.length;
-    const total = lineProgress * numLines;
-    const fullSegs = Math.floor(total);
-    const partial  = total - fullSegs;
-
-    ctx.strokeStyle = 'rgba(232, 220, 198, 0.32)';
-    ctx.lineWidth = 0.6;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-
-    for (let i = 0; i < Math.min(fullSegs, numLines); i++) {
-      const [a, b] = c.lines[i];
-      ctx.moveTo(xs[a], ys[a]);
-      ctx.lineTo(xs[b], ys[b]);
-    }
-
-    if (fullSegs < numLines && partial > 0) {
-      const [a, b] = c.lines[fullSegs];
-      const ax = xs[a], ay = ys[a];
-      const bx = xs[b], by = ys[b];
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(ax + (bx - ax) * partial, ay + (by - ay) * partial);
-    }
-
-    ctx.stroke();
-  }
-
-  function drawLabel(c, alpha) {
-    const x = (c.bbox.x + (c.labelAt?.x ?? 0.5) * c.bbox.w) * cssW;
-    const y = (c.bbox.y + (c.labelAt?.y ?? 1.10) * c.bbox.h) * cssH;
-    ctx.fillStyle = `rgba(232, 220, 198, ${alpha})`;
-    ctx.font = '11px "EB Garamond", Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    // Canvas has no letter-spacing — fake the tracking with double spaces.
-    const text = c.name.toUpperCase().split('').join('  ');
-    ctx.fillText(text, x, y);
   }
 
   if (init()) {
