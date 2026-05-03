@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v23';
+const VERSION = 'v24';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
