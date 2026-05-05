@@ -578,25 +578,301 @@ class Comet {
   }
 }
 
+// ============================================================================
+// Standing Ovation scene — long-break ceremony for the Acting theme.
+// Endless curtain calls: velvet curtains part, silhouettes on stage take bows,
+// applause ripples flow forward from the audience, bouquets arc onto the
+// stage, petals drift, curtains close, brief darkness, repeat — with per-cycle
+// variation so it never feels metronomic.
+// ============================================================================
+
+class BowActor {
+  constructor(stagePos, gender) {
+    this.stagePos = stagePos;          // 0..1 horizontal position on stage
+    this.gender = gender;              // 'masc' | 'fem' — affects silhouette shape
+    this.bowPhase = 0;                 // 0=upright, 1=full bow (~37° forward tilt)
+    this.bowTarget = 0;
+    this.lerpRate = 2.8 + Math.random() * 1.2;
+    this.heightJitter = 0.92 + Math.random() * 0.16;  // slight per-actor scale
+  }
+
+  setBow(target) { this.bowTarget = target; }
+
+  update(dt) {
+    this.bowPhase += (this.bowTarget - this.bowPhase) * Math.min(1, dt * this.lerpRate);
+  }
+
+  // Draws a silhouette at the given stage rect. Hip is the pivot for the bow:
+  // legs stay vertical, torso rotates forward, head follows the torso.
+  draw(ctx, stageX, stageY, stageW, stageH) {
+    const px = stageX + this.stagePos * stageW;
+    const baseScale = (stageH / 320) * this.heightJitter;
+    const tilt = this.bowPhase * 0.65;  // up to ~37 degrees forward
+
+    const headR     = 9 * baseScale;
+    const torsoLen  = 52 * baseScale;
+    const legLen    = 38 * baseScale;
+    const shoulderW = 24 * baseScale;
+    const hipX = px;
+    const hipY = stageY + stageH * 0.96 - legLen;
+
+    ctx.fillStyle = 'rgb(0, 0, 0)';
+
+    // Legs (vertical)
+    ctx.fillRect(hipX - 6 * baseScale, hipY, 12 * baseScale, legLen);
+
+    // For fem silhouette, add a gown/skirt below the hips
+    if (this.gender === 'fem') {
+      ctx.beginPath();
+      ctx.moveTo(hipX - 6 * baseScale,  hipY + legLen * 0.05);
+      ctx.lineTo(hipX + 6 * baseScale,  hipY + legLen * 0.05);
+      ctx.lineTo(hipX + 14 * baseScale, hipY + legLen);
+      ctx.lineTo(hipX - 14 * baseScale, hipY + legLen);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Torso — rectangle pivoting at the hip, tilted forward by `tilt`.
+    ctx.save();
+    ctx.translate(hipX, hipY);
+    ctx.rotate(tilt);
+    ctx.fillRect(-shoulderW * 0.5, -torsoLen, shoulderW, torsoLen);
+    // Subtle shoulder rounding
+    ctx.beginPath();
+    ctx.arc(-shoulderW * 0.5, -torsoLen, 3 * baseScale, 0, Math.PI * 2);
+    ctx.arc( shoulderW * 0.5, -torsoLen, 3 * baseScale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Head — at the end of the rotated torso.
+    const headX = hipX + Math.sin(tilt) * (torsoLen + headR);
+    const headY = hipY - Math.cos(tilt) * (torsoLen + headR);
+    ctx.beginPath();
+    ctx.arc(headX, headY, headR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Arm-to-chest gesture during deep bow — single stroke from shoulder.
+    if (this.bowPhase > 0.3) {
+      const armAlpha = (this.bowPhase - 0.3) / 0.7;
+      const shoulderX = hipX + Math.sin(tilt) * torsoLen * 0.85;
+      const shoulderY = hipY - Math.cos(tilt) * torsoLen * 0.85;
+      const handX = hipX + Math.sin(tilt) * torsoLen * 0.55;
+      const handY = hipY - Math.cos(tilt) * torsoLen * 0.55;
+      ctx.strokeStyle = `rgba(0, 0, 0, ${armAlpha.toFixed(2)})`;
+      ctx.lineWidth = 6 * baseScale;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(shoulderX, shoulderY);
+      ctx.lineTo(handX, handY);
+      ctx.stroke();
+    }
+  }
+}
+
+class AudienceMember {
+  constructor(x, baseY, scale) {
+    this.x = x;
+    this.baseY = baseY;
+    this.scale = scale;                // bigger near front (lower y), smaller in back
+    this.headSize     = (10 + Math.random() * 4) * scale;
+    this.shoulderWidth = (28 + Math.random() * 12) * scale;
+    this.standOffset = 0;              // 0=sitting, +ve=standing (head lifts)
+    this.standTarget = 0;
+    this.standPhase  = Math.random() * Math.PI * 2;
+    this.standSpeed  = 1.4 + Math.random() * 1.0;
+  }
+  update(dt) {
+    this.standOffset += (this.standTarget - this.standOffset) * Math.min(1, dt * this.standSpeed);
+    // A subtle continuous breathing sway so silhouettes are never frozen.
+    this.standPhase += dt * 1.2;
+  }
+  draw(ctx) {
+    const sway = Math.sin(this.standPhase) * 0.6;
+    const y = this.baseY - this.standOffset + sway;
+    ctx.fillStyle = 'rgb(0, 0, 0)';
+    // Shoulders / upper torso — a rounded trapezoid.
+    ctx.beginPath();
+    ctx.moveTo(this.x - this.shoulderWidth * 0.5, y + this.headSize * 2.6);
+    ctx.lineTo(this.x + this.shoulderWidth * 0.5, y + this.headSize * 2.6);
+    ctx.lineTo(this.x + this.shoulderWidth * 0.32, y + this.headSize * 0.7);
+    ctx.lineTo(this.x - this.shoulderWidth * 0.32, y + this.headSize * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(this.x, y, this.headSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Soft golden glow arc that travels from the audience toward the stage —
+// the visual of applause flowing forward. Always moving (no pause-fade).
+class ApplauseRipple {
+  constructor(canvasW, canvasH, intensity) {
+    this.startY  = canvasH * (0.85 + Math.random() * 0.10);
+    this.targetY = canvasH * 0.58;
+    this.y = this.startY;
+    this.x = canvasW * (0.30 + Math.random() * 0.40);
+    this.halfWidth = canvasW * (0.22 + Math.random() * 0.15);
+    this.speed  = 70 + Math.random() * 60;
+    this.alpha  = 0;            // ramp up briefly so origin doesn't pop in
+    this.peakAlpha = (0.18 + Math.random() * 0.18) * intensity;
+    this.life   = 0;
+  }
+  update(dt) {
+    this.life += dt;
+    this.y -= this.speed * dt;
+    // 0..0.3 of travel: fade in. Then linear fade as it climbs.
+    const total = this.startY - this.targetY;
+    const traveled = this.startY - this.y;
+    const t = traveled / total;
+    if (t < 0.15) {
+      this.alpha = (t / 0.15) * this.peakAlpha;
+    } else {
+      this.alpha = (1 - (t - 0.15) / 0.85) * this.peakAlpha;
+    }
+  }
+  isDead() { return this.y < this.targetY || this.alpha <= 0.005; }
+  draw(ctx) {
+    const grad = ctx.createLinearGradient(this.x - this.halfWidth, 0, this.x + this.halfWidth, 0);
+    grad.addColorStop(0,   'rgba(255, 200, 130, 0)');
+    grad.addColorStop(0.5, `rgba(255, 200, 130, ${this.alpha.toFixed(3)})`);
+    grad.addColorStop(1,   'rgba(255, 200, 130, 0)');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(this.x - this.halfWidth, this.y);
+    ctx.quadraticCurveTo(this.x, this.y - 12, this.x + this.halfWidth, this.y);
+    ctx.stroke();
+  }
+}
+
+// A tossed bouquet — parabolic arc from the audience onto the stage. Drawn
+// as a cluster of red rose blobs with green stems trailing the motion.
+class Bouquet {
+  constructor(canvasW, canvasH, stageY) {
+    this.canvasH = canvasH;
+    this.x = canvasW * (0.20 + Math.random() * 0.60);
+    this.y = canvasH * (0.85 + Math.random() * 0.10);
+    const targetX = canvasW * (0.30 + Math.random() * 0.40);
+    const targetY = stageY + (canvasH - stageY) * (0.30 + Math.random() * 0.20);
+    const flightTime = 0.95 + Math.random() * 0.45;
+    this.vx = (targetX - this.x) / flightTime;
+    // y_t = y_0 + vy*t + 0.5*g*t² → solve for vy given target, g
+    this.gravity = 1700;
+    this.vy = (targetY - this.y - 0.5 * this.gravity * flightTime * flightTime) / flightTime;
+    this.angle = Math.random() * Math.PI * 2;
+    this.angularVel = (Math.random() - 0.5) * 7;
+    this.size = 9 + Math.random() * 4;
+    this.life = 0;
+    this.maxLife = flightTime + 0.6;   // slight grace after landing
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += this.gravity * dt;
+    this.angle += this.angularVel * dt;
+    this.life += dt;
+  }
+  isDead() { return this.life > this.maxLife || this.y > this.canvasH + 30; }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    // Stems (drawn first, behind roses)
+    ctx.strokeStyle = 'rgb(40, 50, 28)';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, this.size * 0.4);
+    ctx.lineTo(0, this.size * 1.8);
+    ctx.moveTo(this.size * 0.2, this.size * 0.4);
+    ctx.lineTo(this.size * 0.4, this.size * 1.6);
+    ctx.moveTo(-this.size * 0.2, this.size * 0.4);
+    ctx.lineTo(-this.size * 0.4, this.size * 1.6);
+    ctx.stroke();
+    // Roses — cluster of red blobs
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + Math.PI * 0.15;
+      const cx = Math.cos(a) * this.size * 0.4;
+      const cy = Math.sin(a) * this.size * 0.4 - this.size * 0.15;
+      ctx.fillStyle = i % 2 === 0 ? 'rgb(170, 30, 38)' : 'rgb(200, 50, 55)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, this.size * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Center rose
+    ctx.fillStyle = 'rgb(220, 60, 65)';
+    ctx.beginPath();
+    ctx.arc(0, -this.size * 0.15, this.size * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Drifting petal — small ellipse with random tumble. Used for petal showers
+// and confetti streamers. Always falling, never stationary.
+class Petal {
+  constructor(canvasW, canvasH) {
+    this.canvasH = canvasH;
+    this.x = Math.random() * canvasW;
+    this.y = -10;
+    this.vx = (Math.random() - 0.5) * 40;
+    this.vy = 70 + Math.random() * 60;
+    this.angle = Math.random() * Math.PI * 2;
+    this.angularVel = (Math.random() - 0.5) * 5;
+    this.size = 3.5 + Math.random() * 3.5;
+    const c = Math.random();
+    if (c < 0.65)      this.color = 'rgb(180, 40, 50)';
+    else if (c < 0.85) this.color = 'rgb(210, 55, 65)';
+    else               this.color = 'rgb(150, 30, 40)';
+    this.swayPhase = Math.random() * Math.PI * 2;
+  }
+  update(dt) {
+    this.swayPhase += dt * 2.4;
+    this.x += this.vx * dt + Math.sin(this.swayPhase) * 18 * dt;
+    this.y += this.vy * dt;
+    this.angle += this.angularVel * dt;
+  }
+  isDead() { return this.y > this.canvasH + 20; }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size, this.size * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 const constellationSky = (() => {
   let canvas, ctx;
-  let bgStars = [];
-  let meteors = [];
-  let sparks = [];
-  let trains = [];
-  let comets = [];
   let raf = null;
   let active = false;
   let dpr = 1;
   let cssW = 0, cssH = 0;
   let lastFrameMs = 0;
+
+  // The IIFE drives one of two long-break scenes depending on the active
+  // quote theme: the meteor shower (Thinkers) or the standing ovation
+  // (Acting). Each has its own state; start() picks one.
+  let activeScene = 'meteor';   // 'meteor' | 'ovation'
+
+  // ----- Meteor scene state -----
+  let bgStars = [];
+  let meteors = [];
+  let sparks = [];
+  let trains = [];
+  let comets = [];
   let spawnAccumulator = 0;
-  // Brief screen-brightness pulse triggered by close approaches near center.
-  // Rate-limited so back-to-back close approaches don't oversaturate.
   let lastFlashMs = -1e9;
   let lastFlashStrength = 0;
-  // Per-session moon position offset — slight random shift each break.
   let moonOffsetX = 0, moonOffsetY = 0;
+
+  // ----- Ovation scene state -----
+  let ovation = null;
 
   function init() {
     canvas = document.getElementById('constellation-sky');
@@ -648,18 +924,27 @@ const constellationSky = (() => {
     if (active) return;
     if (!canvas && !init()) return;
     active = true;
-    meteors = [];
-    sparks = [];
-    trains = [];
-    comets = [];
-    spawnAccumulator = 0;
-    lastFlashMs = -1e9;
     lastFrameMs = 0;
-    // Randomize moon position slightly per session — sometimes upper-right,
-    // sometimes upper-left, with a small jitter so it's never identical.
-    moonOffsetX = (Math.random() - 0.5) * 0.10;   // ±5% canvas width
-    moonOffsetY = (Math.random() - 0.5) * 0.04;
-    document.body.classList.add('is-constellation');
+
+    // Pick the scene that matches the user's current quote theme.
+    activeScene = settings.get('quoteTheme') === 'acting' ? 'ovation' : 'meteor';
+
+    if (activeScene === 'ovation') {
+      initOvation();
+      document.body.classList.add('is-ovation');
+    } else {
+      meteors = [];
+      sparks = [];
+      trains = [];
+      comets = [];
+      spawnAccumulator = 0;
+      lastFlashMs = -1e9;
+      // Randomize moon position slightly per session.
+      moonOffsetX = (Math.random() - 0.5) * 0.10;
+      moonOffsetY = (Math.random() - 0.5) * 0.04;
+      document.body.classList.add('is-constellation');
+    }
+
     canvas.classList.add('is-visible');
     if (raf) cancelAnimationFrame(raf);
     raf = requestAnimationFrame(loop);
@@ -669,6 +954,7 @@ const constellationSky = (() => {
     if (!active) return;
     active = false;
     document.body.classList.remove('is-constellation');
+    document.body.classList.remove('is-ovation');
     if (canvas) canvas.classList.remove('is-visible');
     if (raf) cancelAnimationFrame(raf);
     raf = null;
@@ -678,8 +964,13 @@ const constellationSky = (() => {
     if (!active) return;
     const dt = lastFrameMs ? Math.min((timestamp - lastFrameMs) / 1000, 0.05) : 0.016;
     lastFrameMs = timestamp;
-    update(dt, timestamp);
-    render(timestamp);
+    if (activeScene === 'ovation') {
+      updateOvation(dt, timestamp);
+      renderOvation(timestamp);
+    } else {
+      update(dt, timestamp);
+      render(timestamp);
+    }
     raf = requestAnimationFrame(loop);
   }
 
@@ -930,6 +1221,431 @@ const constellationSky = (() => {
     ctx.beginPath();
     ctx.arc(cx + r * 0.55, cy - r * 0.04, r * 0.94, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // ==========================================================================
+  // Ovation scene — initialization + update + render
+  // ==========================================================================
+
+  // Geometry of the theater within the canvas — recomputed whenever needed
+  // from cssW/cssH so it adapts to resize.
+  function ovationGeometry() {
+    return {
+      // Stage occupies upper ~half of the canvas, framed by a proscenium.
+      stageX: cssW * 0.07,
+      stageY: cssH * 0.10,
+      stageW: cssW * 0.86,
+      stageH: cssH * 0.46,
+      // Audience starts below a dark gap (orchestra pit equivalent).
+      audienceTop: cssH * 0.68,
+    };
+  }
+
+  function generateAudience() {
+    const g = ovationGeometry();
+    const out = [];
+    // 5 rows. Front rows (lower y, larger heads) have fewer members but
+    // dominate the silhouette; back rows are denser but smaller.
+    const rows = [
+      { y: cssH * 1.04, count: 14, scale: 1.30 },   // front (mostly off-screen)
+      { y: cssH * 0.95, count: 18, scale: 1.10 },
+      { y: cssH * 0.86, count: 24, scale: 0.88 },
+      { y: cssH * 0.78, count: 30, scale: 0.72 },
+      { y: cssH * 0.71, count: 36, scale: 0.60 },   // back (smallest)
+    ];
+    for (const row of rows) {
+      for (let i = 0; i < row.count; i++) {
+        // Slight horizontal jitter so heads don't line up perfectly.
+        const x = ((i + 0.5) / row.count) * cssW + (Math.random() - 0.5) * (cssW / row.count) * 0.45;
+        out.push(new AudienceMember(x, row.y, row.scale));
+      }
+    }
+    // Avoid overdrawing front rows on top of back rows visually — back rows
+    // first so they sit behind in stacking order.
+    out.sort((a, b) => a.baseY - b.baseY);
+    return out;
+  }
+
+  function initOvation() {
+    ovation = {
+      cyclePhase: 'opening',
+      cyclePhaseT: 0,
+      cycleNum: 0,
+      curtainOpenness: 0,
+      bowers: [],
+      audience: generateAudience(),
+      ripples: [],
+      bouquets: [],
+      petals: [],
+      rippleSpawnAcc: 0,
+      petalSpawnAcc: 0,
+      bouquetsRemaining: 0,
+      bouquetSpawnAcc: 0,
+      // Per-cycle variation — set on each entry into 'opening'.
+      bowerCount: 3,
+      bowChoreo: 'sync',
+      bouquetsThisCycle: 8,
+      petalShower: false,
+      isEncore: false,
+      spotlightColor: [255, 230, 180],
+      spotlightOnT: 0,
+    };
+    seedNewCycle();
+  }
+
+  // Pick variation parameters for the next curtain call. Sometimes "encore"
+  // (no darkness pause) and sometimes a major petal shower.
+  function seedNewCycle() {
+    const o = ovation;
+    o.bowerCount = 1 + Math.floor(Math.random() * 5);     // 1..5 actors
+    o.bowers = [];
+    for (let i = 0; i < o.bowerCount; i++) {
+      // Spread bowers across the central 80% of the stage.
+      const stagePos = o.bowerCount === 1
+        ? 0.5
+        : 0.10 + (i / (o.bowerCount - 1)) * 0.80;
+      const gender = Math.random() > 0.55 ? 'fem' : 'masc';
+      o.bowers.push(new BowActor(stagePos, gender));
+    }
+    // Choreography
+    const choreoR = Math.random();
+    if (choreoR < 0.50)      o.bowChoreo = 'sync';
+    else if (choreoR < 0.85) o.bowChoreo = 'sequential';
+    else                     o.bowChoreo = 'wave';
+    // Bouquet count
+    o.bouquetsThisCycle = 4 + Math.floor(Math.random() * 8);
+    // Occasional petal shower (~20% of cycles)
+    o.petalShower = Math.random() < 0.20;
+    // Spotlight color — usually warm white, occasionally gold or red-tinted
+    const c = Math.random();
+    if (c < 0.75)      o.spotlightColor = [255, 230, 180];   // warm white
+    else if (c < 0.92) o.spotlightColor = [255, 210, 130];   // gold
+    else               o.spotlightColor = [255, 175, 140];   // red-tinted
+  }
+
+  function updateOvation(dt, time) {
+    const o = ovation;
+    if (!o) return;
+    const g = ovationGeometry();
+    o.cyclePhaseT += dt;
+
+    // Cycle state machine
+    switch (o.cyclePhase) {
+      case 'opening': {
+        const dur = 3.5;
+        o.curtainOpenness = Math.min(1, o.cyclePhaseT / dur);
+        o.spotlightOnT = Math.min(1, o.cyclePhaseT / 1.5);
+        if (o.cyclePhaseT >= dur) {
+          o.cyclePhase = 'bowing';
+          o.cyclePhaseT = 0;
+          // First bow: actors stand upright, ready
+          for (const b of o.bowers) b.setBow(0);
+        }
+        break;
+      }
+      case 'bowing': {
+        // Three rounds of bows in this phase, with variation by choreography.
+        // Each round ~3s. Phase total ~9-12s.
+        const roundDur = 3.0;
+        const bowsRound = Math.floor(o.cyclePhaseT / roundDur);
+        const within = (o.cyclePhaseT % roundDur) / roundDur;   // 0..1
+        for (let i = 0; i < o.bowers.length; i++) {
+          const b = o.bowers[i];
+          let phaseShift = 0;
+          if (o.bowChoreo === 'sequential') {
+            phaseShift = i * 0.18;
+          } else if (o.bowChoreo === 'wave') {
+            phaseShift = Math.sin((i / Math.max(1, o.bowers.length - 1)) * Math.PI) * 0.25;
+          }
+          const t = Math.max(0, Math.min(1, within - phaseShift));
+          // Bell curve: rise to full bow at t=0.5, return to 0 at t=1.
+          const bell = Math.sin(t * Math.PI);
+          b.setBow(bell);
+          b.update(dt);
+        }
+        if (o.cyclePhaseT >= roundDur * 3 + 0.5) {
+          o.cyclePhase = 'showering';
+          o.cyclePhaseT = 0;
+          o.bouquetsRemaining = o.bouquetsThisCycle;
+          o.bouquetSpawnAcc = 0;
+        }
+        break;
+      }
+      case 'showering': {
+        // Bouquets spawn over ~5s, paced.
+        const spawnWindow = 4.0;
+        const spawnInterval = spawnWindow / Math.max(1, o.bouquetsThisCycle);
+        o.bouquetSpawnAcc += dt;
+        while (o.bouquetSpawnAcc >= spawnInterval && o.bouquetsRemaining > 0) {
+          o.bouquetSpawnAcc -= spawnInterval;
+          o.bouquetsRemaining--;
+          o.bouquets.push(new Bouquet(cssW, cssH, g.stageY));
+        }
+        // One last shallow bow during the bouquet shower
+        for (const b of o.bowers) {
+          b.setBow(0.4 + 0.15 * Math.sin(o.cyclePhaseT * 1.6));
+          b.update(dt);
+        }
+        if (o.cyclePhaseT >= 6.0) {
+          o.cyclePhase = 'closing';
+          o.cyclePhaseT = 0;
+        }
+        break;
+      }
+      case 'closing': {
+        const dur = 3.5;
+        o.curtainOpenness = Math.max(0, 1 - o.cyclePhaseT / dur);
+        o.spotlightOnT = Math.max(0, 1 - o.cyclePhaseT / 2.0);
+        // Actors return upright as the curtain falls
+        for (const b of o.bowers) {
+          b.setBow(0);
+          b.update(dt);
+        }
+        if (o.cyclePhaseT >= dur) {
+          o.cyclePhase = 'darkness';
+          o.cyclePhaseT = 0;
+          // ~12% encore — skip darkness, jump straight back to opening
+          o.isEncore = Math.random() < 0.12;
+        }
+        break;
+      }
+      case 'darkness': {
+        const dur = o.isEncore ? 0.4 : 2.5;
+        if (o.cyclePhaseT >= dur) {
+          o.cycleNum++;
+          o.cyclePhase = 'opening';
+          o.cyclePhaseT = 0;
+          seedNewCycle();
+        }
+        break;
+      }
+    }
+
+    // Audience standing — during peak applause (bowing/showering), some
+    // members stand up; otherwise gradually return to seated.
+    let standChance = 0;
+    if (o.cyclePhase === 'bowing' || o.cyclePhase === 'showering') {
+      standChance = 0.012;
+    } else if (o.cyclePhase === 'opening') {
+      standChance = 0.005;
+    }
+    for (const m of o.audience) {
+      // Roll for stand changes.
+      if (Math.random() < standChance) {
+        m.standTarget = m.standTarget > 0 ? 0 : (8 + Math.random() * 8) * m.scale;
+      }
+      // During closing/darkness, settle back to sitting.
+      if (o.cyclePhase === 'closing' || o.cyclePhase === 'darkness') {
+        m.standTarget *= Math.pow(0.5, dt);
+      }
+      m.update(dt);
+    }
+
+    // Applause ripples — rate scales with phase intensity.
+    let rippleRate;
+    if (o.cyclePhase === 'bowing')         rippleRate = 5.0;
+    else if (o.cyclePhase === 'showering') rippleRate = 6.0;
+    else if (o.cyclePhase === 'opening')   rippleRate = 2.5 * o.cyclePhaseT / 3.5;
+    else if (o.cyclePhase === 'closing')   rippleRate = 1.5 * o.curtainOpenness;
+    else                                   rippleRate = 0.0;
+    const intensity = o.cyclePhase === 'showering' ? 1.4 : 1.0;
+    o.rippleSpawnAcc += dt * rippleRate;
+    while (o.rippleSpawnAcc >= 1) {
+      o.rippleSpawnAcc -= 1;
+      o.ripples.push(new ApplauseRipple(cssW, cssH, intensity));
+    }
+
+    // Petal shower (rare, dramatic) — spawn from above during bowing/showering
+    // when this cycle was flagged.
+    if (o.petalShower &&
+        (o.cyclePhase === 'bowing' || o.cyclePhase === 'showering')) {
+      o.petalSpawnAcc += dt * 22;   // ~22 petals/sec
+      while (o.petalSpawnAcc >= 1) {
+        o.petalSpawnAcc -= 1;
+        o.petals.push(new Petal(cssW, cssH));
+      }
+    }
+
+    // Update + cull all particle systems
+    for (const r of o.ripples)  r.update(dt);
+    for (const b of o.bouquets) b.update(dt);
+    for (const p of o.petals)   p.update(dt);
+    o.ripples  = o.ripples.filter((r) => !r.isDead());
+    o.bouquets = o.bouquets.filter((b) => !b.isDead());
+    o.petals   = o.petals.filter((p) => !p.isDead());
+  }
+
+  function renderOvation(time) {
+    if (!ovation) return;
+    const o = ovation;
+    const g = ovationGeometry();
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    // 1. Theater background — very dark with a faint warm undertone.
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, cssH);
+    bgGrad.addColorStop(0,   'rgb(8, 4, 6)');
+    bgGrad.addColorStop(0.6, 'rgb(12, 6, 9)');
+    bgGrad.addColorStop(1,   'rgb(18, 8, 11)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    // 2. Stage interior backdrop — slightly lighter than the surrounding theater.
+    const stageGrad = ctx.createLinearGradient(0, g.stageY, 0, g.stageY + g.stageH);
+    stageGrad.addColorStop(0, 'rgb(14, 9, 12)');
+    stageGrad.addColorStop(1, 'rgb(20, 13, 12)');
+    ctx.fillStyle = stageGrad;
+    ctx.fillRect(g.stageX, g.stageY, g.stageW, g.stageH);
+
+    // 3. Spotlight beam from above — wide cone, low alpha.
+    if (o.spotlightOnT > 0.02) {
+      drawSpotlightBeam(ctx, g, o.spotlightColor, o.spotlightOnT);
+    }
+
+    // 4. Spotlight pool on stage floor.
+    if (o.spotlightOnT > 0.02) {
+      const px = g.stageX + g.stageW * 0.5;
+      const py = g.stageY + g.stageH * 0.78;
+      const radius = g.stageW * 0.42;
+      const grad = ctx.createRadialGradient(px, py, 0, px, py, radius);
+      const [r, gn, bl] = o.spotlightColor;
+      grad.addColorStop(0,   `rgba(${r}, ${gn}, ${bl}, ${(0.40 * o.spotlightOnT).toFixed(3)})`);
+      grad.addColorStop(0.5, `rgba(${r}, ${gn}, ${bl}, ${(0.14 * o.spotlightOnT).toFixed(3)})`);
+      grad.addColorStop(1,   `rgba(${r}, ${gn}, ${bl}, 0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(g.stageX - 20, g.stageY - 20, g.stageW + 40, g.stageH + 40);
+    }
+
+    // 5. Bow actors on stage — drawn before the curtain so the curtain
+    //    can actually conceal them on close.
+    for (const b of o.bowers) {
+      b.draw(ctx, g.stageX, g.stageY, g.stageW, g.stageH);
+    }
+
+    // 6. Velvet curtain — covers stage when openness=0, pulled to sides
+    //    when openness=1.
+    drawCurtain(ctx, o.curtainOpenness, g);
+
+    // 7. Proscenium frame — subtle dark vertical bars at the stage edges
+    //    plus a top valance, draws on top of the curtain so it acts like
+    //    the architectural frame in front.
+    drawProscenium(ctx, g);
+
+    // 8. Bouquets in flight — drawn over stage but under audience so they
+    //    can fly through the air realistically.
+    for (const b of o.bouquets) b.draw(ctx);
+
+    // 9. Audience silhouettes — heads-from-below.
+    for (const a of o.audience) a.draw(ctx);
+
+    // 10. Applause ripples — soft golden arcs rising from the audience.
+    for (const r of o.ripples) r.draw(ctx);
+
+    // 11. Petals — drift in front of everything.
+    for (const p of o.petals) p.draw(ctx);
+
+    ctx.restore();
+  }
+
+  // Cone of soft warm light from a hidden source above the proscenium down
+  // to a pool on the stage. Composed of a narrow inner cone and a wider
+  // diffuse outer cone for a softer falloff.
+  function drawSpotlightBeam(ctx, g, color, intensity) {
+    const sourceX = g.stageX + g.stageW * 0.5;
+    const sourceY = g.stageY - g.stageH * 0.10;     // just above proscenium
+    const targetX = g.stageX + g.stageW * 0.5;
+    const targetY = g.stageY + g.stageH * 0.78;
+    const [r, gn, bl] = color;
+
+    const cone = (halfWidthRatio, alpha) => {
+      const dy = targetY - sourceY;
+      const halfWidth = dy * halfWidthRatio;
+      ctx.beginPath();
+      ctx.moveTo(sourceX, sourceY);
+      ctx.lineTo(targetX + halfWidth, targetY);
+      ctx.lineTo(targetX - halfWidth, targetY);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(sourceX, sourceY, targetX, targetY);
+      grad.addColorStop(0, `rgba(${r}, ${gn}, ${bl}, ${(alpha * intensity).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${r}, ${gn}, ${bl}, 0)`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    };
+    cone(0.55, 0.05);   // outer diffuse
+    cone(0.30, 0.10);   // inner core
+  }
+
+  // Two velvet curtain halves that meet in the middle when openness=0 and
+  // get squeezed to the sides as openness→1. Each half is drawn as vertical
+  // bands with sinusoidal lightness for a folded-velvet look.
+  function drawCurtain(ctx, openness, g) {
+    const center = g.stageX + g.stageW * 0.5;
+    const stageL = g.stageX;
+    const stageR = g.stageX + g.stageW;
+
+    // Min half-width when fully open (curtain is "tied back" but still visible
+    // as a sliver at the sides), max half-width when closed.
+    const minHalfW = g.stageW * 0.07;
+    const maxHalfW = g.stageW * 0.50;
+    const halfW = minHalfW + (maxHalfW - minHalfW) * (1 - openness);
+
+    const numFolds = 16;
+
+    const drawHalf = (anchorX, dir) => {
+      // dir = +1 for left half (extends right toward center)
+      // dir = -1 for right half (extends left toward center)
+      for (let i = 0; i < numFolds; i++) {
+        const t = i / (numFolds - 1);            // 0..1 within the half
+        const bandX = anchorX + dir * halfW * t;
+        const bandW = (halfW / numFolds) * 1.15;  // tiny overlap to hide seams
+        // Folded velvet — alternating light and dark vertical strips with a
+        // subtle gradient toward the bunched edge for added depth.
+        const fold = Math.sin(t * Math.PI * 11) * 0.5 + 0.5;          // 0..1
+        const edgeBoost = (1 - Math.abs(t - 0.5) * 1.6) * 0.3 + 0.7;  // mid is brightest
+        const lightness = (0.35 + fold * 0.55) * edgeBoost;
+        const r = Math.round(40 + lightness * 95);
+        const gn = Math.round(6  + lightness * 22);
+        const bl = Math.round(10 + lightness * 18);
+        ctx.fillStyle = `rgb(${r}, ${gn}, ${bl})`;
+        const x = dir === 1 ? bandX : bandX - bandW;
+        ctx.fillRect(x, g.stageY, bandW + 1, g.stageH);
+      }
+      // Bottom hem highlight — slightly lighter band at the very bottom edge.
+      const grad = ctx.createLinearGradient(0, g.stageY + g.stageH - 8, 0, g.stageY + g.stageH);
+      grad.addColorStop(0, 'rgba(140, 30, 35, 0)');
+      grad.addColorStop(1, 'rgba(140, 30, 35, 0.6)');
+      ctx.fillStyle = grad;
+      const xStart = dir === 1 ? anchorX : anchorX - halfW;
+      ctx.fillRect(xStart, g.stageY + g.stageH - 8, halfW, 8);
+    };
+
+    drawHalf(stageL, +1);
+    drawHalf(stageR, -1);
+  }
+
+  // The architectural frame around the stage — vertical pillars at the sides,
+  // a top valance, and a thin sill at the bottom. Pure black/very dark to
+  // sit cleanly on top of the curtain regardless of openness.
+  function drawProscenium(ctx, g) {
+    ctx.fillStyle = 'rgb(4, 2, 4)';
+    // Side pillars
+    ctx.fillRect(0, g.stageY - 4, g.stageX, g.stageH + 8);
+    ctx.fillRect(g.stageX + g.stageW, g.stageY - 4, cssW - (g.stageX + g.stageW), g.stageH + 8);
+    // Top valance — a dark beam across the top, slightly thicker
+    const valanceH = g.stageY * 0.55;
+    const valGrad = ctx.createLinearGradient(0, 0, 0, g.stageY);
+    valGrad.addColorStop(0,   'rgb(2, 1, 2)');
+    valGrad.addColorStop(0.7, 'rgb(8, 4, 6)');
+    valGrad.addColorStop(1,   'rgb(18, 6, 10)');
+    ctx.fillStyle = valGrad;
+    ctx.fillRect(g.stageX - 8, 0, g.stageW + 16, valanceH);
+    // Subtle gold piping along the inside edge of the proscenium top
+    ctx.fillStyle = 'rgba(180, 140, 60, 0.18)';
+    ctx.fillRect(g.stageX, valanceH - 1, g.stageW, 2);
+    // Bottom sill — thin dark band at stage floor level
+    ctx.fillStyle = 'rgb(3, 2, 2)';
+    ctx.fillRect(g.stageX - 8, g.stageY + g.stageH, g.stageW + 16, 4);
   }
 
   if (init()) {
