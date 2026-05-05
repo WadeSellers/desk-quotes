@@ -33,8 +33,9 @@ const DEFAULTS = {
   cyclesBeforeLongBreak: 4,
   soundEnabled: true,
   pauseDuringWork: false, // slideshow keeps cycling during work by default
-  themeMode: 'day',       // day | evening | night (manual choice)
+  themeMode: 'day',       // day | evening | night (visual palette)
   showClock: true,        // top-right day + time display
+  quoteTheme: 'thinkers', // thinkers | acting (which quote collection)
 };
 
 const settings = (() => {
@@ -1054,9 +1055,12 @@ function chime(which) {
 // ----- Mood-aware deck -----------------------------------------------------
 
 class Deck {
-  constructor(allItems, getMood) {
+  constructor(allItems, getMood, storageKey) {
     this.allItems = allItems;
     this.getMood = getMood;          // function returning 'work' | 'rest' | 'any'
+    // Each quote theme has its own persisted deck key so switching themes
+    // resumes each one where it left off rather than blowing them away.
+    this.storageKey = storageKey || STORAGE.deck;
     this.queue = [];
     this.lastDealt = null;
     this.lastMood = null;
@@ -1067,7 +1071,7 @@ class Deck {
   // (unknown slugs are silently dropped on restore).
   _save() {
     try {
-      localStorage.setItem(STORAGE.deck, JSON.stringify({
+      localStorage.setItem(this.storageKey, JSON.stringify({
         queue:     this.queue.map((q) => q.photoSlug),
         lastDealt: this.lastDealt?.photoSlug ?? null,
         lastMood:  this.lastMood,
@@ -1077,7 +1081,7 @@ class Deck {
 
   _restore() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE.deck));
+      const saved = JSON.parse(localStorage.getItem(this.storageKey));
       if (!saved || !Array.isArray(saved.queue)) return;
       const bySlug = new Map(this.allItems.map((q) => [q.photoSlug, q]));
       const queue  = saved.queue.map((s) => bySlug.get(s)).filter(Boolean);
@@ -1367,6 +1371,15 @@ const settingsPanel = (() => {
         <h2 class="settings__title">Settings</h2>
 
         <div class="settings__section">
+          <div class="settings__section-title">Content</div>
+          <div class="settings__row">
+            <span class="settings__label">Theme</span>
+            <span class="settings__value" data-key="quoteTheme"
+              data-options="thinkers:Thinkers|acting:Acting"></span>
+          </div>
+        </div>
+
+        <div class="settings__section">
           <div class="settings__section-title">Slideshow</div>
           <div class="settings__row">
             <span class="settings__label">Slide duration</span>
@@ -1419,7 +1432,7 @@ const settingsPanel = (() => {
         <div class="settings__section">
           <div class="settings__section-title">Display</div>
           <div class="settings__row">
-            <span class="settings__label">Theme</span>
+            <span class="settings__label">Palette</span>
             <span class="settings__value" data-key="themeMode"
               data-options="day:Light|evening:Warm|night:Dark"></span>
           </div>
@@ -1457,8 +1470,9 @@ const settingsPanel = (() => {
           settings.set(key, parsed);
           syncChips();
           ui.update();
-          if (key === 'themeMode') applyTheme();
-          if (key === 'showClock') clock.render();
+          if (key === 'themeMode')  applyTheme();
+          if (key === 'showClock')  clock.render();
+          if (key === 'quoteTheme') onQuoteThemeChanged();
         });
         wrap.appendChild(btn);
       }
@@ -1538,39 +1552,67 @@ requestWakeLock();
 
 // ----- Boot ----------------------------------------------------------------
 
+// Module-level slideshow state so the settings panel can rebuild the deck
+// when the user switches themes without tearing down the whole boot flow.
+let allQuotes = [];
+let deck = null;
+const slideCtx = { current: null };
+let _slideTimer = null;
+
+function buildDeckForCurrentTheme() {
+  const theme = settings.get('quoteTheme');
+  const themeQuotes = allQuotes.filter((q) => q.theme === theme);
+  if (themeQuotes.length === 0) {
+    console.warn(`No quotes found for theme: ${theme}`);
+    return false;
+  }
+  // Per-theme storage key so switching themes resumes each deck where it
+  // left off rather than overwriting one with the other.
+  const storageKey = `${STORAGE.deck}:${theme}`;
+  deck = new Deck(themeQuotes, () => pomodoro.currentMood, storageKey);
+  return true;
+}
+
+function scheduleNext() {
+  if (_slideTimer) clearTimeout(_slideTimer);
+  _slideTimer = setTimeout(() => {
+    _slideTimer = null;
+    const phase = pomodoro.phase;
+    const pausedForWork = settings.get('pauseDuringWork') && phase === POM.WORK;
+    const pausedForLong = phase === POM.LONG;     // constellation ceremony
+    if (!pausedForWork && !pausedForLong) {
+      showNext(deck, slideCtx);
+    }
+    scheduleNext();
+  }, settings.get('slideDurationMs'));
+}
+
+// Called by the settings panel after the user picks a different theme.
+// Rebuilds the deck against the new theme and immediately advances to a
+// fresh slide so the change is visible right away.
+function onQuoteThemeChanged() {
+  if (!buildDeckForCurrentTheme()) return;
+  showNext(deck, slideCtx);
+  scheduleNext();
+}
+
 (async function boot() {
-  let quotes;
   try {
     const res = await fetch(QUOTES_URL, { cache: 'no-cache' });
-    quotes = await res.json();
+    allQuotes = await res.json();
   } catch (err) {
     console.error('Failed to load quotes.json', err);
     return;
   }
-  if (!Array.isArray(quotes) || quotes.length === 0) return;
+  if (!Array.isArray(allQuotes) || allQuotes.length === 0) return;
 
-  const deck = new Deck(quotes, () => pomodoro.currentMood);
-  const ctx = { current: null };
+  if (!buildDeckForCurrentTheme()) return;
 
-  await loadImage(`assets/photos/${quotes[0].photoSlug}.jpg`);
-  showNext(deck, ctx);
-
-  // Cancellable timer so a tap-to-advance can reset the countdown cleanly.
-  // Also picks up slideDurationMs changes made in settings without a reload.
-  let _slideTimer = null;
-  function scheduleNext() {
-    if (_slideTimer) clearTimeout(_slideTimer);
-    _slideTimer = setTimeout(() => {
-      _slideTimer = null;
-      const phase = pomodoro.phase;
-      const pausedForWork = settings.get('pauseDuringWork') && phase === POM.WORK;
-      const pausedForLong = phase === POM.LONG;     // constellation ceremony
-      if (!pausedForWork && !pausedForLong) {
-        showNext(deck, ctx);
-      }
-      scheduleNext();
-    }, settings.get('slideDurationMs'));
-  }
+  // Preload the next photo from the active theme so the first transition
+  // is instant rather than waiting on the first network round-trip.
+  const themeQuotes = allQuotes.filter((q) => q.theme === settings.get('quoteTheme'));
+  await loadImage(`assets/photos/${themeQuotes[0].photoSlug}.jpg`);
+  showNext(deck, slideCtx);
   scheduleNext();
 
   // Tap anywhere on the stage (except the corner controls or settings overlay)
@@ -1579,7 +1621,7 @@ requestWakeLock();
   stage.addEventListener('click', (e) => {
     if (e.target.closest('#ctrl-pomodoro, #ctrl-settings, .settings')) return;
     if (pomodoro.phase === POM.LONG) return;
-    showNext(deck, ctx);
+    showNext(deck, slideCtx);
     scheduleNext();
   });
 })();
