@@ -226,22 +226,22 @@ class Meteor {
     // approach) overrides the angle to a tighter cone for drama.
     const sizeRand = Math.random();
     let speed;
-    let useRadiant = true;
-    let radiantSpread = 0.45;
+    let radiantSpread = 0.40;
 
-    if (sizeRand < 0.04) {
-      // CLOSE APPROACH — rare, fast, thick, glowing, multi-layer trail.
-      // Trail is now long enough to span much of the canvas at peak.
-      this.length     = 600 + Math.random() * 400;
+    if (sizeRand < 0.18) {
+      // CLOSE APPROACH — common now, fast, thick, multi-layer trail. Built
+      // for "flying through the shower" feel: long enough to span most of
+      // the canvas, thick enough to read as a burning rock not a line.
+      this.length     = 800 + Math.random() * 600;
       this.brightness = 0.98;
-      this.headRadius = 3.5 + Math.random() * 2.0;
-      this.glow       = 0.95;
-      this.lineWidth  = 5.0 + Math.random() * 3.0;
-      this.coreWidth  = 1.5 + Math.random() * 1.0;
+      this.headRadius = 3.8 + Math.random() * 2.2;
+      this.glow       = 1.0;
+      this.lineWidth  = 6.0 + Math.random() * 4.0;
+      this.coreWidth  = 1.6 + Math.random() * 1.2;
       speed           = 1700 + Math.random() * 700;
-      radiantSpread   = 0.30;
+      radiantSpread   = 0.28;
       this.kind       = 'close';
-    } else if (sizeRand < 0.13) {
+    } else if (sizeRand < 0.30) {
       this.length     = 150 + Math.random() * 90;
       this.brightness = 0.85 + Math.random() * 0.15;
       this.headRadius = 2.2 + Math.random() * 0.6;
@@ -249,7 +249,7 @@ class Meteor {
       this.lineWidth  = 1.5 + Math.random() * 0.7;
       speed           = 280 + Math.random() * 200;
       this.kind       = 'fireball';
-    } else if (sizeRand < 0.38) {
+    } else if (sizeRand < 0.55) {
       this.length     = 90 + Math.random() * 60;
       this.brightness = 0.55 + Math.random() * 0.20;
       this.headRadius = 1.4 + Math.random() * 0.4;
@@ -267,13 +267,9 @@ class Meteor {
       this.kind       = 'small';
     }
 
-    // ~9% of regular meteors are sporadic — random angle, not from the
-    // radiant. Close approaches stay on-radiant for drama.
-    if (this.kind !== 'close' && Math.random() < 0.09) useRadiant = false;
-
-    const angle = useRadiant
-      ? Math.PI * 0.30 + (Math.random() - 0.5) * radiantSpread
-      : Math.random() * Math.PI * 2;
+    // All meteors come from the same radiant — no sporadic counter-direction
+    // streaks. Slight per-meteor jitter keeps them from being parallel.
+    const angle = Math.PI * 0.30 + (Math.random() - 0.5) * radiantSpread;
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
     this.angle = angle;
@@ -485,12 +481,109 @@ class PersistentTrain {
   }
 }
 
+// Comet — a different beast than meteors. Slow, large, with a wide
+// triple-layered diffuse tail and a luminous nucleus. Crosses the sky
+// over many seconds, giving "look up there" moments. Always moving (no
+// pause) at constant velocity until off-canvas.
+class Comet {
+  constructor(canvasW, canvasH) {
+    this.canvasW = canvasW;
+    this.canvasH = canvasH;
+    // Slow speed — comets drift, they don't streak.
+    const speed = 80 + Math.random() * 80;
+    // Same radiant cone as meteors so the directionality stays coherent.
+    const angle = Math.PI * 0.30 + (Math.random() - 0.5) * 0.35;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.length     = 280 + Math.random() * 220;
+    this.headRadius = 4.0 + Math.random() * 2.0;
+    this.brightness = 0.85;
+
+    const padding = this.length + 80;
+    if (Math.abs(this.vx) > Math.abs(this.vy)) {
+      this.x = this.vx > 0 ? -padding : canvasW + padding;
+      this.y = Math.random() * canvasH * 0.7;
+    } else {
+      this.x = Math.random() * canvasW * 0.85;
+      this.y = this.vy > 0 ? -padding : canvasH + padding;
+    }
+
+    // Comets lean blue-white (ion tail) or warm cream (dust tail).
+    this.colorBase = Math.random() < 0.5
+      ? 'rgba(220,235,255,'   // cool ion-tail blue-white
+      : 'rgba(255,238,210,';  // warm dust-tail cream
+  }
+
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+
+  isDead() {
+    const margin = this.length + 80;
+    return this.x > this.canvasW + margin
+        || this.y > this.canvasH + margin
+        || this.x < -margin
+        || this.y < -margin;
+  }
+
+  draw(ctx) {
+    const speed = Math.hypot(this.vx, this.vy);
+    if (speed === 0) return;
+    const dirX = this.vx / speed;
+    const dirY = this.vy / speed;
+    const tailX = this.x - dirX * this.length;
+    const tailY = this.y - dirY * this.length;
+
+    // Three layered tails — wide outer haze, mid body, narrow bright core.
+    // Combined they read as a soft diffuse plume rather than a sharp line.
+    const layer = (lineWidth, alphaScale) => {
+      const grad = ctx.createLinearGradient(tailX, tailY, this.x, this.y);
+      grad.addColorStop(0, `${this.colorBase}0)`);
+      grad.addColorStop(1, `${this.colorBase}${(this.brightness * alphaScale).toFixed(3)})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(this.x, this.y);
+      ctx.stroke();
+    };
+    layer(34, 0.18);   // outer haze
+    layer(14, 0.45);   // mid body
+    layer(3.5, 1.0);   // bright core
+
+    // Nucleus glow halo
+    const glowR = this.headRadius * 9;
+    const glowGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
+    glowGrad.addColorStop(0, `${this.colorBase}${(this.brightness * 0.45).toFixed(3)})`);
+    glowGrad.addColorStop(1, `${this.colorBase}0)`);
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright nucleus
+    ctx.fillStyle = `${this.colorBase}${this.brightness.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.headRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White-hot core dot in the very center of the nucleus
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.headRadius * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 const constellationSky = (() => {
   let canvas, ctx;
   let bgStars = [];
   let meteors = [];
   let sparks = [];
   let trains = [];
+  let comets = [];
   let raf = null;
   let active = false;
   let dpr = 1;
@@ -498,10 +591,11 @@ const constellationSky = (() => {
   let lastFrameMs = 0;
   let spawnAccumulator = 0;
   // Brief screen-brightness pulse triggered by close approaches near center.
-  // Stored as the timestamp (ms) of the trigger; the render code computes a
-  // 200ms decay overlay from that.
+  // Rate-limited so back-to-back close approaches don't oversaturate.
   let lastFlashMs = -1e9;
   let lastFlashStrength = 0;
+  // Per-session moon position offset — slight random shift each break.
+  let moonOffsetX = 0, moonOffsetY = 0;
 
   function init() {
     canvas = document.getElementById('constellation-sky');
@@ -536,14 +630,13 @@ const constellationSky = (() => {
         y: -padY + Math.random() * (h + padY * 2),
         r: Math.random() * 0.7 + 0.3,
         baseAlpha: Math.random() * 0.5 + 0.25,
-        twinkleSpeed: Math.random() * 0.0012 + 0.0004,
+        twinkleSpeed: Math.random() * 0.0014 + 0.0004,
         twinklePhase: Math.random() * Math.PI * 2,
         warm: Math.random() < 0.25,
-        // Per-star "flash" state — cooldown timer + active flash time.
-        // When flashCooldown reaches 0, the star may flare; flashTimer
-        // tracks the active flare's progress so it always moves through
-        // its full cycle (no pause-fade).
-        flashCooldown: 30 + Math.random() * 90,  // seconds until next flare
+        // Frequent random flash events — every 4-18 seconds per star.
+        // Each flash always animates through its full bell curve (no
+        // static pause-fade).
+        flashCooldown: 4 + Math.random() * 14,
         flashTimer: 0,
       });
     }
@@ -557,9 +650,14 @@ const constellationSky = (() => {
     meteors = [];
     sparks = [];
     trains = [];
+    comets = [];
     spawnAccumulator = 0;
     lastFlashMs = -1e9;
     lastFrameMs = 0;
+    // Randomize moon position slightly per session — sometimes upper-right,
+    // sometimes upper-left, with a small jitter so it's never identical.
+    moonOffsetX = (Math.random() - 0.5) * 0.10;   // ±5% canvas width
+    moonOffsetY = (Math.random() - 0.5) * 0.04;
     document.body.classList.add('is-constellation');
     canvas.classList.add('is-visible');
     if (raf) cancelAnimationFrame(raf);
@@ -585,49 +683,68 @@ const constellationSky = (() => {
   }
 
   function update(dt, time) {
-    // Continuous shower: ~2.6 meteors/sec average.
-    const baseRate = 2.6;
+    // Heavy continuous shower: ~4.5 meteors/sec average. With 18% close
+    // approach rate that's roughly one close approach every 1.2s — multiple
+    // visible at once, "flying through it" feel.
+    const baseRate = 4.5;
     spawnAccumulator += dt * baseRate;
     while (spawnAccumulator >= 1) {
       spawnAccumulator -= 1;
       meteors.push(new Meteor(cssW, cssH));
     }
 
-    // Bursts — sudden flurries roughly every 18s.
-    if (Math.random() < dt * 0.055) {
-      const burstSize = 6 + Math.floor(Math.random() * 7);
+    // Bursts — sudden flurries every ~12s. 10-20 meteors at once, so the
+    // sky regularly lights up with multiple streaks tearing across.
+    if (Math.random() < dt * 0.080) {
+      const burstSize = 10 + Math.floor(Math.random() * 11);
       for (let i = 0; i < burstSize; i++) {
         meteors.push(new Meteor(cssW, cssH));
       }
+    }
+
+    // Storm — rare but huge. Once every ~90s a 30-50 meteor avalanche.
+    // The peak chaos moment.
+    if (Math.random() < dt * 0.011) {
+      const stormSize = 30 + Math.floor(Math.random() * 21);
+      for (let i = 0; i < stormSize; i++) {
+        meteors.push(new Meteor(cssW, cssH));
+      }
+    }
+
+    // Comets — slow, large, ~once every 80s.
+    if (Math.random() < dt * 0.0125) {
+      comets.push(new Comet(cssW, cssH));
     }
 
     // Update meteors and emit sparks/trains/flashes from special ones.
     for (const m of meteors) {
       m.update(dt);
 
-      // Close approaches: shed sparks every ~25-50ms while on canvas.
+      // Close approaches shed sparks every ~40-80ms while on canvas.
       if (m.kind === 'close' && m.isOnCanvas()) {
         m._sparkAcc = (m._sparkAcc || 0) + dt;
-        const interval = 0.025 + Math.random() * 0.025;
+        const interval = 0.04 + Math.random() * 0.04;
         while (m._sparkAcc >= interval) {
           m._sparkAcc -= interval;
-          // 2-3 sparks per emission for density
-          const n = 2 + Math.floor(Math.random() * 2);
+          const n = 1 + Math.floor(Math.random() * 2);
           for (let i = 0; i < n; i++) {
             sparks.push(new Spark(m.x, m.y, m.vx, m.vy, m.colorBase));
           }
         }
       }
 
-      // Screen flash — fired once per close approach, when its head
-      // passes through the central 60% of the canvas.
+      // Screen flash — fired once per close approach passing through the
+      // central area. Rate-limited (min 700ms apart) so back-to-back ones
+      // don't oversaturate, and intensity scales with how central it is.
       if (m.kind === 'close' && !m.flashTriggered && m.isOnCanvas()) {
         const cx = cssW * 0.5, cy = cssH * 0.5;
         const dist = Math.hypot(m.x - cx, m.y - cy);
-        if (dist < Math.min(cssW, cssH) * 0.30) {
+        const flashRadius = Math.min(cssW, cssH) * 0.28;
+        if (dist < flashRadius && (time - lastFlashMs) > 700) {
           m.flashTriggered = true;
+          const closeness = 1 - (dist / flashRadius);
           lastFlashMs = time;
-          lastFlashStrength = 0.18 + Math.random() * 0.08;
+          lastFlashStrength = 0.10 + closeness * 0.20;
         }
       }
 
@@ -658,12 +775,16 @@ const constellationSky = (() => {
 
     for (const s of sparks) s.update(dt);
     for (const t of trains) t.update(dt);
+    for (const c of comets) c.update(dt);
 
-    if (meteors.length > 120) meteors = meteors.filter((m) => !m.isDead()).slice(-120);
+    // Hard caps as safety nets — should rarely be hit in practice. Higher
+    // ceiling now to accommodate storms.
+    if (meteors.length > 220) meteors = meteors.filter((m) => !m.isDead()).slice(-220);
     else                       meteors = meteors.filter((m) => !m.isDead());
-    if (sparks.length > 400)   sparks = sparks.filter((s) => !s.isDead()).slice(-400);
+    if (sparks.length > 500)   sparks = sparks.filter((s) => !s.isDead()).slice(-500);
     else                       sparks = sparks.filter((s) => !s.isDead());
     trains = trains.filter((t) => !t.isDead());
+    comets = comets.filter((c) => !c.isDead());
 
     // Background star twinkle-flashes. Each star carries its own cooldown,
     // and once a flash starts it always animates through its full ~0.6s
@@ -694,27 +815,28 @@ const constellationSky = (() => {
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, cssW, cssH);
 
+    // Aurora bands — slow undulating green and violet ribbons across the
+    // upper sky. Low opacity so they read as ambient atmosphere.
+    drawAurora(ctx, time, cssW, cssH);
+
     // Subtle slow drift of the entire star field — sin/cos give an
-    // elliptical sway. The stars are generated with a 60px padding, so
-    // up to ±30px drift never reveals a star-less edge.
+    // elliptical sway. Stars + moon both translate together.
     const driftX = Math.sin(time * 0.000035) * 22;
     const driftY = Math.cos(time * 0.000022) * 12;
 
     ctx.save();
     ctx.translate(driftX, driftY);
 
-    // Background star field. Each star has continuous twinkle plus an
-    // occasional bright flare.
+    // Background star field. Continuous twinkle + frequent random flares.
     for (const s of bgStars) {
       const tw = Math.sin(time * s.twinkleSpeed + s.twinklePhase) * 0.35 + 0.65;
       let a = s.baseAlpha * tw;
       let r = s.r;
-      // Flash boost — a bell-shaped pulse over the flash duration.
       if (s.flashTimer > 0 && s._flashDuration > 0) {
-        const t = 1 - s.flashTimer / s._flashDuration;        // 0 → 1
-        const bell = Math.sin(t * Math.PI);                   // 0 → 1 → 0
+        const t = 1 - s.flashTimer / s._flashDuration;
+        const bell = Math.sin(t * Math.PI);
         a = Math.min(1, a + bell * 0.85);
-        r = s.r + bell * 1.4;
+        r = s.r + bell * 1.6;
       }
       ctx.fillStyle = s.warm
         ? `rgba(255, 240, 220, ${a})`
@@ -723,18 +845,21 @@ const constellationSky = (() => {
       ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Moon — drifts with the star field.
+    drawMoon(ctx, cssW, cssH);
+
     ctx.restore();
 
-    // Persistent trains under meteors so the active heads always look
-    // brighter than their afterglow.
+    // Persistent trains, then comets, then meteors+sparks. Meteors render
+    // last (well, before flash) so their heads sit on top of any afterglow.
     for (const t of trains) t.draw(ctx);
-
-    // Meteors and sparks.
+    for (const c of comets) c.draw(ctx);
     for (const m of meteors) m.draw(ctx);
     for (const s of sparks)  s.draw(ctx);
 
     // Screen flash — brief full-canvas brightness pulse from a close
-    // approach. Decays in 200ms.
+    // approach. Decays in 220ms.
     const flashAge = time - lastFlashMs;
     if (flashAge >= 0 && flashAge < 220) {
       const fa = (1 - flashAge / 220) * lastFlashStrength;
@@ -743,6 +868,67 @@ const constellationSky = (() => {
     }
 
     ctx.restore();
+  }
+
+  // Two soft undulating aurora bands across the upper sky — green and
+  // violet. The wave shape is recomputed each frame from sin(x*freq + t).
+  function drawAurora(ctx, time, w, h) {
+    const band = (color, yBase, amp, freqX, freqT, phase, thickness, opacity) => {
+      const segments = 80;
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const x = (i / segments) * w;
+        const y = yBase + Math.sin(x * freqX + time * freqT + phase) * amp;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      for (let i = segments; i >= 0; i--) {
+        const x = (i / segments) * w;
+        const y = yBase + Math.sin(x * freqX + time * freqT + phase) * amp + thickness;
+        ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, yBase - amp, 0, yBase + amp + thickness);
+      grad.addColorStop(0,    `${color}0)`);
+      grad.addColorStop(0.45, `${color}${opacity})`);
+      grad.addColorStop(1,    `${color}0)`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    };
+    // Green (lower, wider, brighter)
+    band('rgba(120, 240, 180,', h * 0.20, 24, 0.005,  0.00018, 0,   100, 0.10);
+    // Violet (higher, slightly narrower)
+    band('rgba(180, 130, 255,', h * 0.11, 18, 0.0065, 0.00012, 1.5,  70, 0.07);
+  }
+
+  // Waning crescent moon with a soft halo. Position randomized slightly
+  // per session via moonOffsetX/Y so it's not always in the same spot.
+  function drawMoon(ctx, w, h) {
+    const cx = w * (0.78 + moonOffsetX);
+    const cy = h * (0.13 + moonOffsetY);
+    const r = 26;
+
+    // Soft halo (3-stop radial gradient for a smooth falloff).
+    const haloR = r * 4.2;
+    const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, haloR);
+    haloGrad.addColorStop(0,   'rgba(245, 240, 215, 0.20)');
+    haloGrad.addColorStop(0.4, 'rgba(245, 240, 215, 0.07)');
+    haloGrad.addColorStop(1,   'rgba(245, 240, 215, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright moon disk — soft cream.
+    ctx.fillStyle = 'rgb(232, 226, 196)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crescent shadow disk — matches the upper sky color for clean blend.
+    ctx.fillStyle = 'rgb(7, 9, 20)';
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.55, cy - r * 0.04, r * 0.94, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   if (init()) {

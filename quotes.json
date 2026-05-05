@@ -878,5 +878,27 @@
     "wikiTitle": "Walt_Whitman",
     "source": "Song of Myself, Leaves of Grass, 1855",
     "mood": "rest"
+  },
+  {
+    "quote": "All of humanity's problems stem from man's inability to sit quietly in a room alone.",
+    "name": "Blaise Pascal",
+    "dates": "1623–1662",
+    "role": "Mathematician & Philosopher",
+    "category": "philosophy",
+    "photoSlug": "pascal",
+    "wikiTitle": "Blaise_Pascal",
+    "source": "Pensées, 1670",
+    "mood": "rest"
+  },
+  {
+    "quote": "An underrated thing that you can do… just sit in a dark room… actually think about things… it's amazing how twenty minutes alone in a dark room… can change everything.",
+    "name": "Christopher Pierznik",
+    "dates": "",
+    "role": "Writer",
+    "category": "philosophy",
+    "photoSlug": "pierznik",
+    "wikiTitle": "",
+    "source": "",
+    "mood": "rest"
   }
 ]
