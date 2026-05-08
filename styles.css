@@ -72,21 +72,14 @@ body.is-day.is-break    { --bg-rgb: 244, 236, 219; }
 body.is-evening.is-break { --bg-rgb: 235, 220, 195; }
 body.is-night.is-break   { --bg-rgb: 28, 22, 14; }
 
-/* Long-break ceremony palette overrides — force a scene-appropriate palette
+/* Long-break ceremony palette override — forces a deep night-sky palette
    regardless of the user's theme so the corner controls stay legible over
    the canvas. Wins specificity ties via doubled class selector and source
-   order (these rules come after the per-theme rules). */
+   order (this rule comes after the per-theme rules). */
 body.is-constellation.is-constellation {
   --bg-rgb:    8, 10, 22;
   --ink-rgb:   232, 220, 198;
   --muted-rgb: 168, 138, 99;
-}
-
-/* Standing ovation — deep theater-burgundy backdrop, warm gold text. */
-body.is-ovation.is-ovation {
-  --bg-rgb:    14, 6, 9;
-  --ink-rgb:   245, 215, 160;
-  --muted-rgb: 195, 145, 90;
 }
 
 * {
@@ -502,18 +495,14 @@ html, body { transition: background-color 1800ms ease, color 1800ms ease; }
   pointer-events: auto;  /* absorb taps so they don't reach the slide */
 }
 
-/* During the long-break ceremonies (either scene), the pomodoro button's
-   warm-brown break coloring reads as too dim against the dark canvas.
-   Promote both the phase label and time digits to the --ink color so
-   they stay legible. */
+/* During constellation mode, the pomodoro button's warm-brown break
+   coloring reads as too dim against the deep navy sky. Promote both the
+   phase label and time digits to the bone --ink color for legibility. */
 body.is-constellation .ctrl-pomodoro.is-break .ctrl-pomodoro__phase,
-body.is-constellation .ctrl-pomodoro.is-break .ctrl-pomodoro__time,
-body.is-ovation       .ctrl-pomodoro.is-break .ctrl-pomodoro__phase,
-body.is-ovation       .ctrl-pomodoro.is-break .ctrl-pomodoro__time {
+body.is-constellation .ctrl-pomodoro.is-break .ctrl-pomodoro__time {
   color: var(--ink);
 }
-body.is-constellation .cycles__dot.is-filled,
-body.is-ovation       .cycles__dot.is-filled {
+body.is-constellation .cycles__dot.is-filled {
   background: var(--ink);
   border-color: var(--ink);
 }

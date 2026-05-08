@@ -578,195 +578,6 @@ class Comet {
   }
 }
 
-// ============================================================================
-// Standing Ovation scene — long-break ceremony for the Acting theme.
-// Real theater photographs (Unsplash + Wikimedia Commons) crossfade behind a
-// procedural overlay of applause-glow ripples, falling rose petals, arcing
-// bouquets, and audience camera flashes. The photos do all the heavy lifting
-// (ornate prosceniums, real silhouettes, real curtains); the procedural
-// layers add the living motion that a static photo can't.
-// ============================================================================
-
-// Soft golden glow arc that travels from the audience toward the stage —
-// the visual of applause flowing forward. Always moving (no pause-fade).
-class ApplauseRipple {
-  constructor(canvasW, canvasH, intensity) {
-    this.startY  = canvasH * (0.85 + Math.random() * 0.10);
-    this.targetY = canvasH * 0.58;
-    this.y = this.startY;
-    this.x = canvasW * (0.30 + Math.random() * 0.40);
-    this.halfWidth = canvasW * (0.22 + Math.random() * 0.15);
-    this.speed  = 70 + Math.random() * 60;
-    this.alpha  = 0;            // ramp up briefly so origin doesn't pop in
-    this.peakAlpha = (0.18 + Math.random() * 0.18) * intensity;
-    this.life   = 0;
-  }
-  update(dt) {
-    this.life += dt;
-    this.y -= this.speed * dt;
-    // 0..0.3 of travel: fade in. Then linear fade as it climbs.
-    const total = this.startY - this.targetY;
-    const traveled = this.startY - this.y;
-    const t = traveled / total;
-    if (t < 0.15) {
-      this.alpha = (t / 0.15) * this.peakAlpha;
-    } else {
-      this.alpha = (1 - (t - 0.15) / 0.85) * this.peakAlpha;
-    }
-  }
-  isDead() { return this.y < this.targetY || this.alpha <= 0.005; }
-  draw(ctx) {
-    const grad = ctx.createLinearGradient(this.x - this.halfWidth, 0, this.x + this.halfWidth, 0);
-    grad.addColorStop(0,   'rgba(255, 200, 130, 0)');
-    grad.addColorStop(0.5, `rgba(255, 200, 130, ${this.alpha.toFixed(3)})`);
-    grad.addColorStop(1,   'rgba(255, 200, 130, 0)');
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(this.x - this.halfWidth, this.y);
-    ctx.quadraticCurveTo(this.x, this.y - 12, this.x + this.halfWidth, this.y);
-    ctx.stroke();
-  }
-}
-
-// A tossed bouquet — parabolic arc from the audience onto the stage. Drawn
-// as a cluster of red rose blobs with green stems trailing the motion.
-class Bouquet {
-  constructor(canvasW, canvasH, stageY) {
-    this.canvasH = canvasH;
-    this.x = canvasW * (0.20 + Math.random() * 0.60);
-    this.y = canvasH * (0.85 + Math.random() * 0.10);
-    const targetX = canvasW * (0.30 + Math.random() * 0.40);
-    const targetY = stageY + (canvasH - stageY) * (0.30 + Math.random() * 0.20);
-    const flightTime = 0.95 + Math.random() * 0.45;
-    this.vx = (targetX - this.x) / flightTime;
-    // y_t = y_0 + vy*t + 0.5*g*t² → solve for vy given target, g
-    this.gravity = 1700;
-    this.vy = (targetY - this.y - 0.5 * this.gravity * flightTime * flightTime) / flightTime;
-    this.angle = Math.random() * Math.PI * 2;
-    this.angularVel = (Math.random() - 0.5) * 7;
-    this.size = 9 + Math.random() * 4;
-    this.life = 0;
-    this.maxLife = flightTime + 0.6;   // slight grace after landing
-  }
-  update(dt) {
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-    this.vy += this.gravity * dt;
-    this.angle += this.angularVel * dt;
-    this.life += dt;
-  }
-  isDead() { return this.life > this.maxLife || this.y > this.canvasH + 30; }
-  draw(ctx) {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
-    // Stems (drawn first, behind roses)
-    ctx.strokeStyle = 'rgb(40, 50, 28)';
-    ctx.lineWidth = 1.8;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, this.size * 0.4);
-    ctx.lineTo(0, this.size * 1.8);
-    ctx.moveTo(this.size * 0.2, this.size * 0.4);
-    ctx.lineTo(this.size * 0.4, this.size * 1.6);
-    ctx.moveTo(-this.size * 0.2, this.size * 0.4);
-    ctx.lineTo(-this.size * 0.4, this.size * 1.6);
-    ctx.stroke();
-    // Roses — cluster of red blobs
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 + Math.PI * 0.15;
-      const cx = Math.cos(a) * this.size * 0.4;
-      const cy = Math.sin(a) * this.size * 0.4 - this.size * 0.15;
-      ctx.fillStyle = i % 2 === 0 ? 'rgb(170, 30, 38)' : 'rgb(200, 50, 55)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, this.size * 0.42, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // Center rose
-    ctx.fillStyle = 'rgb(220, 60, 65)';
-    ctx.beginPath();
-    ctx.arc(0, -this.size * 0.15, this.size * 0.45, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-// Drifting petal — small ellipse with random tumble. Used for petal showers
-// and confetti streamers. Always falling, never stationary.
-class Petal {
-  constructor(canvasW, canvasH) {
-    this.canvasH = canvasH;
-    this.x = Math.random() * canvasW;
-    this.y = -10;
-    this.vx = (Math.random() - 0.5) * 40;
-    this.vy = 70 + Math.random() * 60;
-    this.angle = Math.random() * Math.PI * 2;
-    this.angularVel = (Math.random() - 0.5) * 5;
-    this.size = 3.5 + Math.random() * 3.5;
-    const c = Math.random();
-    if (c < 0.65)      this.color = 'rgb(180, 40, 50)';
-    else if (c < 0.85) this.color = 'rgb(210, 55, 65)';
-    else               this.color = 'rgb(150, 30, 40)';
-    this.swayPhase = Math.random() * Math.PI * 2;
-  }
-  update(dt) {
-    this.swayPhase += dt * 2.4;
-    this.x += this.vx * dt + Math.sin(this.swayPhase) * 18 * dt;
-    this.y += this.vy * dt;
-    this.angle += this.angularVel * dt;
-  }
-  isDead() { return this.y > this.canvasH + 20; }
-  draw(ctx) {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, this.size, this.size * 0.42, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-// Brief camera flash from the audience — bright pop with a soft halo,
-// peaks then disappears in a fraction of a second. Always animating
-// through its bell curve (no static fade).
-class CameraFlash {
-  constructor(canvasW, canvasH) {
-    // Bias toward lower portion of the canvas (where the audience would be)
-    this.x = canvasW * (0.08 + Math.random() * 0.84);
-    this.y = canvasH * (0.62 + Math.random() * 0.32);
-    this.life = 0;
-    this.maxLife = 0.13 + Math.random() * 0.10;
-    this.size = 4 + Math.random() * 5;
-    this.intensity = 0.65 + Math.random() * 0.30;
-  }
-  update(dt) { this.life += dt; }
-  isDead() { return this.life >= this.maxLife; }
-  draw(ctx) {
-    const t = this.life / this.maxLife;
-    const bell = Math.sin(t * Math.PI);     // 0 → 1 → 0
-    const a = bell * this.intensity;
-    if (a < 0.01) return;
-    // Soft halo (radial gradient)
-    const haloR = this.size * 6;
-    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, haloR);
-    grad.addColorStop(0,   `rgba(255, 250, 235, ${(a * 0.45).toFixed(3)})`);
-    grad.addColorStop(0.4, `rgba(255, 248, 230, ${(a * 0.18).toFixed(3)})`);
-    grad.addColorStop(1,   'rgba(255, 248, 230, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, haloR, 0, Math.PI * 2);
-    ctx.fill();
-    // Bright core
-    ctx.fillStyle = `rgba(255, 255, 250, ${a.toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 const constellationSky = (() => {
   let canvas, ctx;
   let raf = null;
@@ -775,12 +586,8 @@ const constellationSky = (() => {
   let cssW = 0, cssH = 0;
   let lastFrameMs = 0;
 
-  // The IIFE drives one of two long-break scenes depending on the active
-  // quote theme: the meteor shower (Thinkers) or the standing ovation
-  // (Acting). Each has its own state; start() picks one.
-  let activeScene = 'meteor';   // 'meteor' | 'ovation'
-
-  // ----- Meteor scene state -----
+  // Meteor-shower scene state — used for the long-break ceremony across
+  // all quote themes.
   let bgStars = [];
   let meteors = [];
   let sparks = [];
@@ -790,9 +597,6 @@ const constellationSky = (() => {
   let lastFlashMs = -1e9;
   let lastFlashStrength = 0;
   let moonOffsetX = 0, moonOffsetY = 0;
-
-  // ----- Ovation scene state -----
-  let ovation = null;
 
   function init() {
     canvas = document.getElementById('constellation-sky');
@@ -846,24 +650,16 @@ const constellationSky = (() => {
     active = true;
     lastFrameMs = 0;
 
-    // Pick the scene that matches the user's current quote theme.
-    activeScene = settings.get('quoteTheme') === 'acting' ? 'ovation' : 'meteor';
-
-    if (activeScene === 'ovation') {
-      initOvation();
-      document.body.classList.add('is-ovation');
-    } else {
-      meteors = [];
-      sparks = [];
-      trains = [];
-      comets = [];
-      spawnAccumulator = 0;
-      lastFlashMs = -1e9;
-      // Randomize moon position slightly per session.
-      moonOffsetX = (Math.random() - 0.5) * 0.10;
-      moonOffsetY = (Math.random() - 0.5) * 0.04;
-      document.body.classList.add('is-constellation');
-    }
+    meteors = [];
+    sparks = [];
+    trains = [];
+    comets = [];
+    spawnAccumulator = 0;
+    lastFlashMs = -1e9;
+    // Randomize moon position slightly per session.
+    moonOffsetX = (Math.random() - 0.5) * 0.10;
+    moonOffsetY = (Math.random() - 0.5) * 0.04;
+    document.body.classList.add('is-constellation');
 
     canvas.classList.add('is-visible');
     if (raf) cancelAnimationFrame(raf);
@@ -874,7 +670,6 @@ const constellationSky = (() => {
     if (!active) return;
     active = false;
     document.body.classList.remove('is-constellation');
-    document.body.classList.remove('is-ovation');
     if (canvas) canvas.classList.remove('is-visible');
     if (raf) cancelAnimationFrame(raf);
     raf = null;
@@ -884,13 +679,8 @@ const constellationSky = (() => {
     if (!active) return;
     const dt = lastFrameMs ? Math.min((timestamp - lastFrameMs) / 1000, 0.05) : 0.016;
     lastFrameMs = timestamp;
-    if (activeScene === 'ovation') {
-      updateOvation(dt, timestamp);
-      renderOvation(timestamp);
-    } else {
-      update(dt, timestamp);
-      render(timestamp);
-    }
+    update(dt, timestamp);
+    render(timestamp);
     raf = requestAnimationFrame(loop);
   }
 
@@ -1142,238 +932,6 @@ const constellationSky = (() => {
     ctx.arc(cx + r * 0.55, cy - r * 0.04, r * 0.94, 0, Math.PI * 2);
     ctx.fill();
   }
-
-  // ==========================================================================
-  // Ovation scene — photo backdrops + procedural particle layers
-  // Cycles through real theater photos (Unsplash + Wikimedia Commons) with a
-  // slow Ken Burns drift and a 4-second crossfade between them. Procedural
-  // applause-glow ripples, falling rose petals, arcing bouquets, and
-  // audience camera flashes layer on top — all continuously moving — so the
-  // canvas feels alive without any drawn figures.
-  // ==========================================================================
-
-  const OVATION_PHOTOS = [
-    'assets/theater/01-curtain-classic.jpg',
-    'assets/theater/02-performers-silhouette.jpg',
-    'assets/theater/03-ornate-interior.jpg',
-    'assets/theater/04-stage-lit.jpg',
-    'assets/theater/05-curtain-drama.jpg',
-    'assets/theater/06-lyric-curtain-call.jpg',
-    'assets/theater/08-oedipe-ovation.jpg',
-  ];
-
-  let ovationImages = [];          // HTMLImageElement[] — loaded once, reused
-
-  function loadOvationImages() {
-    if (ovationImages.length > 0) return;
-    ovationImages = OVATION_PHOTOS.map((path) => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = path;
-      return img;
-    });
-  }
-
-  // Pick random pan and zoom directions for the next photo. Always non-zero
-  // motion so the photo breathes throughout its display window.
-  function newKenBurns() {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 0.025 + Math.random() * 0.025;     // 2.5%-5% of canvas dim
-    return {
-      sScale: 1.04 + Math.random() * 0.04,          // start 1.04..1.08
-      eScale: 1.13 + Math.random() * 0.07,          // end   1.13..1.20
-      sX: Math.cos(angle) * dist,
-      sY: Math.sin(angle) * dist,
-      eX: -Math.cos(angle) * dist,                  // pan in the opposite direction
-      eY: -Math.sin(angle) * dist,
-    };
-  }
-
-  function initOvation() {
-    loadOvationImages();
-    const startIdx = Math.floor(Math.random() * ovationImages.length);
-    ovation = {
-      photoIdx: startIdx,
-      nextIdx: (startIdx + 1) % ovationImages.length,
-      photoElapsed: 0,
-      photoDuration: 35 + Math.random() * 25,    // 35-60s per photo
-      transitionDuration: 4.0,
-      isTransitioning: false,
-      transitionT: 0,
-      nextPhotoElapsed: 0,
-      currentKB: newKenBurns(),
-      nextKB: null,
-
-      // Procedural overlay particles
-      ripples: [],
-      bouquets: [],
-      petals: [],
-      flashes: [],
-
-      // Spawn time accumulators (frame-rate-independent)
-      rippleAcc: 0,
-      bouquetAcc: 0,
-      petalAcc: 0,
-      flashAcc: 0,
-
-      // Phase clock for "wave" intensity oscillation — celebration breathes
-      phaseT: 0,
-    };
-  }
-
-  function updateOvation(dt, time) {
-    const o = ovation;
-    if (!o) return;
-
-    // Photo crossfade scheduling.
-    if (o.isTransitioning) {
-      o.transitionT += dt / o.transitionDuration;
-      o.nextPhotoElapsed += dt;
-      if (o.transitionT >= 1) {
-        o.photoIdx = o.nextIdx;
-        o.nextIdx = (o.photoIdx + 1) % ovationImages.length;
-        o.photoElapsed = o.nextPhotoElapsed;
-        o.currentKB = o.nextKB;
-        o.nextKB = null;
-        o.isTransitioning = false;
-        o.photoDuration = 35 + Math.random() * 25;
-      }
-    } else {
-      o.photoElapsed += dt;
-      if (o.photoElapsed >= o.photoDuration - o.transitionDuration) {
-        o.isTransitioning = true;
-        o.transitionT = 0;
-        o.nextPhotoElapsed = 0;
-        o.nextKB = newKenBurns();
-      }
-    }
-
-    // Phase clock — slow sine wave drives intensity for all particle systems
-    // so the celebration swells and settles instead of feeling metronomic.
-    o.phaseT += dt;
-    const wave = 0.5 + 0.5 * Math.sin(o.phaseT * 0.55);   // 0..1, ~11s period
-
-    const rippleRate  = 3.0 + wave * 3.0;     // 3-6 / sec
-    const bouquetRate = 0.30 + wave * 0.55;   // 0.3-0.85 / sec
-    const petalRate   = 4.5 + wave * 7.0;     // 4.5-11.5 / sec
-    const flashRate   = 0.6 + wave * 1.6;     // 0.6-2.2 / sec
-
-    o.rippleAcc  += dt * rippleRate;
-    o.bouquetAcc += dt * bouquetRate;
-    o.petalAcc   += dt * petalRate;
-    o.flashAcc   += dt * flashRate;
-
-    while (o.rippleAcc >= 1) {
-      o.rippleAcc -= 1;
-      o.ripples.push(new ApplauseRipple(cssW, cssH, 1.0 + wave * 0.4));
-    }
-    while (o.bouquetAcc >= 1) {
-      o.bouquetAcc -= 1;
-      // Use cssH * 0.30 as the "stage line" target — bouquets land somewhere
-      // in the upper part of the canvas regardless of which photo is showing.
-      o.bouquets.push(new Bouquet(cssW, cssH, cssH * 0.30));
-    }
-    while (o.petalAcc >= 1) {
-      o.petalAcc -= 1;
-      o.petals.push(new Petal(cssW, cssH));
-    }
-    while (o.flashAcc >= 1) {
-      o.flashAcc -= 1;
-      o.flashes.push(new CameraFlash(cssW, cssH));
-      // Occasional small burst — 2-3 flashes near simultaneously.
-      if (Math.random() < 0.10) {
-        o.flashes.push(new CameraFlash(cssW, cssH));
-        if (Math.random() < 0.35) o.flashes.push(new CameraFlash(cssW, cssH));
-      }
-    }
-
-    for (const r of o.ripples)  r.update(dt);
-    for (const b of o.bouquets) b.update(dt);
-    for (const p of o.petals)   p.update(dt);
-    for (const f of o.flashes)  f.update(dt);
-    o.ripples  = o.ripples.filter((r) => !r.isDead());
-    o.bouquets = o.bouquets.filter((b) => !b.isDead());
-    o.petals   = o.petals.filter((p) => !p.isDead());
-    o.flashes  = o.flashes.filter((f) => !f.isDead());
-  }
-
-  function renderOvation(time) {
-    if (!ovation) return;
-    const o = ovation;
-
-    ctx.save();
-    ctx.scale(dpr, dpr);
-
-    // Default fill — only visible if photos haven't loaded yet.
-    ctx.fillStyle = 'rgb(14, 6, 9)';
-    ctx.fillRect(0, 0, cssW, cssH);
-
-    // Current photo with Ken Burns.
-    const currentImg = ovationImages[o.photoIdx];
-    const currentT = ovationClamp(o.photoElapsed / o.photoDuration, 0, 1);
-    const currentAlpha = o.isTransitioning ? (1 - o.transitionT) : 1;
-    drawPhotoFitCover(ctx, currentImg, o.currentKB, currentT, cssW, cssH, currentAlpha);
-
-    // Next photo (only during the crossfade window).
-    if (o.isTransitioning) {
-      const nextImg = ovationImages[o.nextIdx];
-      const nextT = ovationClamp(o.nextPhotoElapsed / o.photoDuration, 0, 1);
-      drawPhotoFitCover(ctx, nextImg, o.nextKB, nextT, cssW, cssH, o.transitionT);
-    }
-
-    // Subtle vignette to darken the corners and pull the eye toward center.
-    const vGrad = ctx.createRadialGradient(
-      cssW * 0.5, cssH * 0.5, Math.min(cssW, cssH) * 0.30,
-      cssW * 0.5, cssH * 0.5, Math.max(cssW, cssH) * 0.72
-    );
-    vGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vGrad.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
-    ctx.fillStyle = vGrad;
-    ctx.fillRect(0, 0, cssW, cssH);
-
-    // Procedural overlays (back to front)
-    for (const b of o.bouquets) b.draw(ctx);
-    for (const r of o.ripples)  r.draw(ctx);
-    for (const f of o.flashes)  f.draw(ctx);
-    for (const p of o.petals)   p.draw(ctx);
-
-    ctx.restore();
-  }
-
-  // Object-fit:cover behavior with Ken Burns scale + pan applied. Pan
-  // values in the KB are normalized (-0.05..0.05) and converted to pixels.
-  function drawPhotoFitCover(ctx, img, kb, t, w, h, alpha) {
-    if (!img.complete || !img.naturalWidth) return;
-
-    const scale = ovationLerp(kb.sScale, kb.eScale, t);
-    const panX  = ovationLerp(kb.sX, kb.eX, t) * w;
-    const panY  = ovationLerp(kb.sY, kb.eY, t) * h;
-
-    const imgRatio = img.naturalWidth / img.naturalHeight;
-    const canvasRatio = w / h;
-    let drawW, drawH;
-    if (imgRatio > canvasRatio) {
-      // Image wider than canvas — fit height
-      drawH = h;
-      drawW = h * imgRatio;
-    } else {
-      // Image taller than canvas — fit width
-      drawW = w;
-      drawH = w / imgRatio;
-    }
-    drawW *= scale;
-    drawH *= scale;
-
-    const x = (w - drawW) / 2 + panX;
-    const y = (h - drawH) / 2 + panY;
-
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(img, x, y, drawW, drawH);
-    ctx.globalAlpha = 1;
-  }
-
-  function ovationLerp(a, b, t) { return a + (b - a) * t; }
-  function ovationClamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   if (init()) {
     pomodoro.on((state) => {

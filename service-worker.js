@@ -6,7 +6,7 @@
 //   - For photos: cache-first, lazily filling the cache as slides display.
 //   - On version bump, the old cache is purged and the shell re-downloaded.
 
-const VERSION = 'v28';
+const VERSION = 'v29';
 const SHELL_CACHE = `desk-quotes-shell-${VERSION}`;
 const PHOTO_CACHE = `desk-quotes-photos-${VERSION}`;
 
@@ -23,14 +23,6 @@ const SHELL_ASSETS = [
   'assets/icons/icon-192.png',
   'assets/icons/icon-512.png',
   'assets/icons/icon-512-maskable.png',
-  // Theater backdrops for the Acting-theme long-break ovation scene.
-  'assets/theater/01-curtain-classic.jpg',
-  'assets/theater/02-performers-silhouette.jpg',
-  'assets/theater/03-ornate-interior.jpg',
-  'assets/theater/04-stage-lit.jpg',
-  'assets/theater/05-curtain-drama.jpg',
-  'assets/theater/06-lyric-curtain-call.jpg',
-  'assets/theater/08-oedipe-ovation.jpg',
 ];
 
 self.addEventListener('install', (event) => {
