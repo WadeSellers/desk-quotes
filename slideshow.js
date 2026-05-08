@@ -15,7 +15,7 @@ const STORAGE = {
 // 2-minute long break with the full constellation show.
 // Set TEST_MODE = false (or delete this block) when done previewing.
 // ============================================================
-const TEST_MODE = true;
+const TEST_MODE = false;
 const TEST_OVERRIDES = {
   workMinutes: 0.05,         // 3 seconds of "work"
   breakMinutes: 0.05,        // 3 seconds (unused with cyclesBeforeLongBreak=1)
