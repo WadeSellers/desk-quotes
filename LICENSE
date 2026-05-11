@@ -1,0 +1,54 @@
+MIT License
+
+Copyright (c) 2026 Wade Sellers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+================================================================================
+Scope and third-party content
+================================================================================
+
+The MIT license above covers the source code of this project — the HTML,
+CSS, JavaScript, shell scripts, and configuration files authored for Desk
+Quotes.
+
+The following bundled content is NOT covered by the MIT license and retains
+its original licensing terms:
+
+  * assets/photos/        Portrait photographs sourced primarily from
+                          Wikimedia Commons. Per-image license, author, and
+                          source links are documented in
+                          assets/photos/CREDITS.md. Reusers must consult
+                          that file and honor the terms of each individual
+                          image (attribution, share-alike, etc.).
+
+  * assets/fonts/         Font files redistributed under their original
+                          open-font licenses (see the upstream font
+                          project for terms).
+
+  * quotes.json           Quotations are attributed to their original
+                          authors. The selection and curation of the
+                          collection is the author's editorial work; the
+                          quoted text itself remains the intellectual
+                          property of (or in the public domain through)
+                          its original source.
+
+If you fork this project and substitute your own assets, the MIT license
+above is sufficient for the code. If you redistribute the bundled assets,
+you are responsible for complying with their respective licenses.
