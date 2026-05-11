@@ -1383,7 +1383,10 @@ const settingsPanel = (() => {
         <div class="settings__section">
           <div class="settings__section-title">Slideshow</div>
           <div class="settings__row">
-            <span class="settings__label">Slide duration</span>
+            <span class="settings__label">
+              Slide duration
+              <span class="settings__sub">Tap a slide to advance it manually.</span>
+            </span>
             <span class="settings__value" data-key="slideDurationMs"
               data-options="30000:30s|45000:45s|60000:1m|90000:90s"></span>
           </div>
@@ -1399,12 +1402,12 @@ const settingsPanel = (() => {
           <div class="settings__row">
             <span class="settings__label">Work</span>
             <span class="settings__value" data-key="workMinutes"
-              data-options="25:25m|50:50m|90:90m"></span>
+              data-options="15:15m|20:20m|25:25m|50:50m|60:60m|90:90m"></span>
           </div>
           <div class="settings__row">
             <span class="settings__label">Break</span>
             <span class="settings__value" data-key="breakMinutes"
-              data-options="5:5m|10:10m|15:15m"></span>
+              data-options="5:5m|10:10m|15:15m|20:20m"></span>
           </div>
           <div class="settings__row">
             <span class="settings__label">Long break</span>
@@ -1414,7 +1417,7 @@ const settingsPanel = (() => {
           <div class="settings__row">
             <span class="settings__label">Cycles before long break</span>
             <span class="settings__value" data-key="cyclesBeforeLongBreak"
-              data-options="3:3|4:4|5:5"></span>
+              data-options="2:2|3:3|4:4|5:5"></span>
           </div>
           <div class="settings__row">
             <span class="settings__label">Sound on transitions</span>
@@ -1422,7 +1425,7 @@ const settingsPanel = (() => {
               data-options="true:On|false:Off"></span>
           </div>
           <div class="settings__row">
-            <span class="settings__label">Preview</span>
+            <span class="settings__label">Preview sounds</span>
             <span class="settings__value">
               <button class="settings__chip" type="button" data-preview="work">Work end</button>
               <button class="settings__chip" type="button" data-preview="break">Break end</button>

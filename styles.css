@@ -646,6 +646,15 @@ body.is-constellation .cycles__dot.is-filled {
 
 .settings__label { color: var(--ink); }
 
+.settings__sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
 .settings__value {
   display: flex;
   gap: 6px;
